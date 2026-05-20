@@ -13,7 +13,7 @@ FROM base AS builder
 RUN pip install hatchling
 
 COPY pyproject.toml .
-RUN pip install --no-deps .
+RUN pip install .
 
 # ─── Runtime ──────────────────────────────────────────────────────────────────
 FROM base AS runtime
