@@ -138,7 +138,10 @@ def validate_token(token: str, settings: Settings) -> TokenClaims:
     except (KeyError, ValueError):
         raise InvalidTokenError("Token is missing a valid subject claim.")
 
-    raw_trust_id = payload.get(JWT_CLAIM_TRUST_ID)
+    # trust_id, roles, and school_ids are injected into app_metadata by the
+    # Supabase custom_access_token_hook function.
+    app_metadata: dict = payload.get("app_metadata") or {}
+    raw_trust_id = app_metadata.get(JWT_CLAIM_TRUST_ID) or payload.get(JWT_CLAIM_TRUST_ID)
     trust_id: UUID | None = None
     if raw_trust_id:
         try:
@@ -146,8 +149,6 @@ def validate_token(token: str, settings: Settings) -> TokenClaims:
         except ValueError:
             raise InvalidTokenError("Token contains an invalid trust_id claim.")
 
-    # Roles and school_ids may be stored in app_metadata or a top-level claim
-    app_metadata: dict = payload.get("app_metadata") or {}
     roles: list[str] = app_metadata.get("roles") or payload.get("roles") or []
     raw_school_ids: list = app_metadata.get("school_ids") or []
     school_ids: list[UUID] = []
