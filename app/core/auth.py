@@ -3,7 +3,7 @@ JWT validation and current-user dependency.
 
 Flow:
   1. Client sends: Authorization: Bearer <supabase_jwt>
-  2. validate_token()   — verifies signature + claims locally (no network call)
+  2. validate_token()   — verifies signature + claims locally
   3. TokenClaims        — parsed claims extracted from the verified JWT
   4. get_current_user() — FastAPI dependency that validates the token and
                           returns a CurrentUser value object
@@ -11,15 +11,20 @@ Flow:
 The trust_id is read from the JWT custom claim "trust_id", which must be
 injected by a Supabase Auth hook (see scripts/seed_system_roles.py for the
 PostgreSQL function that does this).
+
+Supports both HS256 (legacy Supabase projects) and ES256 (newer Supabase
+projects that use asymmetric signing). ES256 keys are fetched from Supabase's
+JWKS endpoint and cached in-process.
 """
 
 from dataclasses import dataclass, field
 from uuid import UUID
 
+import httpx
 import structlog
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import ExpiredSignatureError, JWTError, jwt
+from jose import ExpiredSignatureError, JWTError, jwk as jose_jwk, jwt
 
 from app.config import Settings, get_settings
 from app.shared.constants import JWT_CLAIM_TRUST_ID, ROLE_PLATFORM_SUPERADMIN
@@ -28,6 +33,26 @@ from app.shared.exceptions import InvalidTokenError, TenantContextMissingError, 
 logger = structlog.get_logger(__name__)
 
 _bearer = HTTPBearer(auto_error=False)
+
+# Module-level JWKS cache — populated on first ES256 token, reused thereafter.
+_jwks_cache: list[dict] | None = None
+
+
+def _get_jwks_keys(supabase_url: str) -> list[dict]:
+    global _jwks_cache
+    if _jwks_cache is None:
+        try:
+            resp = httpx.get(
+                f"{supabase_url}/auth/v1/.well-known/jwks.json",
+                timeout=10,
+            )
+            resp.raise_for_status()
+            _jwks_cache = resp.json().get("keys", [])
+            logger.info("JWKS keys loaded", count=len(_jwks_cache))
+        except Exception as exc:
+            logger.warning("Failed to fetch JWKS", error=str(exc))
+            _jwks_cache = []
+    return _jwks_cache
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,14 +91,42 @@ def validate_token(token: str, settings: Settings) -> TokenClaims:
     """
     Validate a Supabase JWT and return its parsed claims.
     Raises InvalidTokenError or TokenExpiredError — never propagates jose internals.
+    Supports HS256 (symmetric) and ES256 (asymmetric via JWKS).
     """
     try:
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=[settings.jwt_algorithm],
-            audience=settings.jwt_audience,
-        )
+        header = jwt.get_unverified_header(token)
+        alg = header.get("alg", settings.jwt_algorithm)
+
+        if alg == "HS256":
+            payload = jwt.decode(
+                token,
+                settings.supabase_jwt_secret,
+                algorithms=["HS256"],
+                audience=settings.jwt_audience,
+            )
+        else:
+            kid = header.get("kid")
+            keys = _get_jwks_keys(settings.supabase_url)
+            payload = None
+            last_exc: JWTError | None = None
+            for key_data in keys:
+                if kid and key_data.get("kid") != kid:
+                    continue
+                try:
+                    public_key = jose_jwk.construct(key_data)
+                    payload = jwt.decode(
+                        token,
+                        public_key,
+                        algorithms=[alg],
+                        audience=settings.jwt_audience,
+                    )
+                    break
+                except ExpiredSignatureError:
+                    raise
+                except JWTError as exc:
+                    last_exc = exc
+            if payload is None:
+                raise last_exc or JWTError("No matching JWKS key found for token")
     except ExpiredSignatureError:
         raise TokenExpiredError()
     except JWTError as exc:
@@ -123,11 +176,8 @@ async def get_current_user(
     Raises 401 if no/invalid token, 403 if trust_id is absent.
     """
     if credentials is None:
-        logger.warning("No Bearer credentials in request — Authorization header missing or empty")
         raise InvalidTokenError("No Bearer token provided.")
 
-    token_preview = credentials.credentials[:30] if credentials.credentials else "(empty)"
-    logger.warning("Validating token", token_preview=token_preview, token_length=len(credentials.credentials or ""))
     claims = validate_token(credentials.credentials, settings)
 
     if claims.trust_id is None and not claims.is_superadmin:
