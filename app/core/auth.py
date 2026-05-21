@@ -77,7 +77,7 @@ def validate_token(token: str, settings: Settings) -> TokenClaims:
     except ExpiredSignatureError:
         raise TokenExpiredError()
     except JWTError as exc:
-        logger.debug("JWT validation failed", reason=str(exc))
+        logger.warning("JWT validation failed", reason=str(exc))
         raise InvalidTokenError()
 
     try:
