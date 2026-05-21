@@ -25,6 +25,7 @@ from app.routers.v1 import (
     timesheets,
     shifts_dashboard,
     users,
+    schools,
 )
 
 settings = get_settings()
@@ -51,3 +52,4 @@ api_router.include_router(shifts_dashboard.router)
 
 # User Provisioning
 api_router.include_router(users.router)
+api_router.include_router(schools.router)
