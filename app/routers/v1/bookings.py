@@ -35,6 +35,7 @@ async def create_booking(
         trust_id=current_user.trust_id,
         role_type_id=body.role_type_id,
         shift_date=body.shift_date,
+        end_date=body.end_date,
         start_time=body.start_time,
         end_time=body.end_time,
         agreed_hourly_rate=body.agreed_hourly_rate,

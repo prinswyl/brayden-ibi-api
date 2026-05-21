@@ -11,6 +11,7 @@ class BookingCreate(BaseModel):
     school_id: UUID
     role_type_id: UUID
     shift_date: date
+    end_date: date | None = None
     start_time: time
     end_time: time
     agreed_hourly_rate: Decimal = Field(gt=0)
@@ -38,6 +39,7 @@ class BookingResponse(BaseModel):
     role_type_id: UUID
     requested_by: UUID
     shift_date: date
+    end_date: date | None
     start_time: time
     end_time: time
     dispatch_mode: DispatchMode
