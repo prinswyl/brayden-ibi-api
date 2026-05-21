@@ -26,6 +26,7 @@ from app.middleware.logging import StructuredLoggingMiddleware
 from app.middleware.request_id import RequestIDMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
 from app.routers.api import api_router
+from app.services.supabase_admin import SupabaseAdminError
 from app.shared.exceptions import BraydenIBIException
 from app.shared.logging import configure_logging
 
@@ -114,6 +115,16 @@ def create_app() -> FastAPI:
                 "message": exc.message,
                 "details": exc.details,
             },
+        )
+
+    @app.exception_handler(SupabaseAdminError)
+    async def supabase_admin_error_handler(
+        request: Request, exc: SupabaseAdminError
+    ) -> ORJSONResponse:
+        logger.error("supabase_admin_error", message=str(exc), path=str(request.url))
+        return ORJSONResponse(
+            status_code=exc.status_code,
+            content={"error": "EMAIL_DELIVERY_FAILED", "message": str(exc), "details": None},
         )
 
     @app.exception_handler(Exception)
