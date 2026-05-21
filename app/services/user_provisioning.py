@@ -61,8 +61,17 @@ class UserProvisioningService:
         if existing:
             raise ConflictError(f"A user with email '{email}' already exists in this trust.")
 
-        # Create application user record first
+        # Call Supabase invite FIRST so we get the auth user's UUID back.
+        # public.users.id must equal auth.users.id for the custom claims hook
+        # to find the row and inject trust_id into the JWT.
+        auth_data = await self._supabase.invite_user_by_email(
+            email,
+            data={"first_name": first_name, "last_name": last_name},
+        )
+        auth_user_id = UUID(auth_data["id"])
+
         user = await self._user_repo.create(
+            id=auth_user_id,
             trust_id=current_user.trust_id,
             email=email,
             first_name=first_name,
@@ -70,7 +79,6 @@ class UserProvisioningService:
             invited_by=current_user.user_id,
         )
 
-        # Create the initial role assignment
         await self._assignment_repo.create(
             trust_id=current_user.trust_id,
             user_id=user.id,
@@ -78,19 +86,6 @@ class UserProvisioningService:
             role=role,
             assigned_by=current_user.user_id,
         )
-
-        # Send Supabase invite email; non-fatal — user record already exists
-        try:
-            await self._supabase.invite_user_by_email(
-                email,
-                data={"first_name": first_name, "last_name": last_name},
-            )
-        except Exception:
-            logger.warning(
-                "supabase_invite_failed_non_fatal",
-                user_id=str(user.id),
-                email=email,
-            )
 
         logger.info("user_invited", user_id=str(user.id), role=role, invited_by=str(current_user.user_id))
         return user
