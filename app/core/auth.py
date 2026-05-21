@@ -123,8 +123,11 @@ async def get_current_user(
     Raises 401 if no/invalid token, 403 if trust_id is absent.
     """
     if credentials is None:
+        logger.warning("No Bearer credentials in request — Authorization header missing or empty")
         raise InvalidTokenError("No Bearer token provided.")
 
+    token_preview = credentials.credentials[:30] if credentials.credentials else "(empty)"
+    logger.warning("Validating token", token_preview=token_preview, token_length=len(credentials.credentials or ""))
     claims = validate_token(credentials.credentials, settings)
 
     if claims.trust_id is None and not claims.is_superadmin:
