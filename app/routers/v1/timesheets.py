@@ -106,6 +106,7 @@ async def list_corrections(
 @router.get("", response_model=TimesheetListResponse)
 async def list_timesheets(
     status: TimesheetStatus | None = Query(None),
+    school_id: UUID | None = Query(None),
     offset: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -113,8 +114,6 @@ async def list_timesheets(
 ):
     from app.repositories.timesheet import TimesheetRepository
     repo = TimesheetRepository(db)
-    if status:
-        items, total = await repo.list_by_status(status, offset=offset, limit=limit)
-    else:
-        items, total = await repo.list_all(offset=offset, limit=limit)
+    filters = {k: v for k, v in {"status": status, "school_id": school_id}.items() if v is not None}
+    items, total = await repo.list_all(filters=filters or None, offset=offset, limit=limit)
     return TimesheetListResponse(items=items, total=total, offset=offset, limit=limit)

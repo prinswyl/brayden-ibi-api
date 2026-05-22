@@ -355,9 +355,9 @@ class BookingService:
         self,
         *,
         status: BookingStatus | None = None,
+        school_id: UUID | None = None,
         offset: int = 0,
         limit: int = 25,
     ) -> tuple[list[Booking], int]:
-        if status:
-            return await self._bookings.list_by_status(status, offset=offset, limit=limit)
-        return await self._bookings.list_all(offset=offset, limit=limit)
+        filters = {k: v for k, v in {"status": status, "school_id": school_id}.items() if v is not None}
+        return await self._bookings.list_all(filters=filters or None, offset=offset, limit=limit)

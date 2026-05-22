@@ -52,13 +52,14 @@ async def create_booking(
 @router.get("", response_model=BookingListResponse)
 async def list_bookings(
     status: BookingStatus | None = Query(None),
+    school_id: UUID | None = Query(None),
     offset: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_permission("bookings:read")),
 ):
     svc = BookingService(db)
-    items, total = await svc.list_bookings(status=status, offset=offset, limit=limit)
+    items, total = await svc.list_bookings(status=status, school_id=school_id, offset=offset, limit=limit)
     return BookingListResponse(items=items, total=total, offset=offset, limit=limit)
 
 
