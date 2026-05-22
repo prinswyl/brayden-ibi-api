@@ -58,6 +58,25 @@ async def invite_user(
 
 
 @router.get(
+    "/me",
+    response_model=UserWithAssignmentsResponse,
+    summary="Get the currently authenticated user's own profile and assignments",
+)
+async def get_me(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserWithAssignmentsResponse:
+    svc = UserProvisioningService(db)
+    user = await svc.get_user(current_user.user_id)
+    assignments = await svc.get_user_assignments(current_user.user_id)
+    user_resp = UserResponse.model_validate(user)
+    return UserWithAssignmentsResponse(
+        **user_resp.model_dump(),
+        assignments=[AssignmentResponse.model_validate(a) for a in assignments],
+    )
+
+
+@router.get(
     "",
     response_model=UserListResponse,
     summary="List users in the trust",
