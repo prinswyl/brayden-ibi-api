@@ -119,6 +119,7 @@ def _user_has_permission(user: CurrentUser, permission: str) -> bool:
         ROLE_RECEPTIONIST: {
             "bookings:read",
             "first_shift:verify",
+            "workers:update",  # allowed to confirm physical ID on SCR
         },
         ROLE_PAYROLL_OFFICER: {
             "timesheets:read", "timesheets:export",
@@ -127,6 +128,10 @@ def _user_has_permission(user: CurrentUser, permission: str) -> bool:
         ROLE_WORKER: {
             "availability:read", "availability:write",
             "bookings:read", "timesheets:read", "timesheets:submit",
+            "workers:self_update",
+            "compliance_documents:read", "compliance_documents:self_upload",
+            "onboarding:self_submit",
+            "safeguarding:self_complete",
         },
     }
 

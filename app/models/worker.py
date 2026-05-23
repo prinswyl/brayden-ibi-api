@@ -56,6 +56,13 @@ class WorkerProfile(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Bas
 
     notes: Mapped[str | None] = mapped_column(Text)
 
+    # Teacher Reference Number (for QTS / teaching staff)
+    teacher_reference_number: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Overseas checks declaration
+    overseas_checks_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    overseas_checks_details: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Home location and travel radius
     home_postcode: Mapped[str | None] = mapped_column(Text)
     home_latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))

@@ -27,6 +27,9 @@ from app.routers.v1 import (
     users,
     schools,
     role_types,
+    worker_self,
+    scr,
+    trust_settings,
 )
 
 settings = get_settings()
@@ -55,3 +58,8 @@ api_router.include_router(shifts_dashboard.router)
 api_router.include_router(users.router)
 api_router.include_router(schools.router)
 api_router.include_router(role_types.router)
+
+# SCR & Worker Self-Service
+api_router.include_router(worker_self.router)
+api_router.include_router(scr.router)
+api_router.include_router(trust_settings.router)

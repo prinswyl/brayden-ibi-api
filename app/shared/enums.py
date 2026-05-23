@@ -169,3 +169,48 @@ class AuditAction(str, enum.Enum):
     export = "export"
     view = "view"
     upload = "upload"
+
+
+# ── SCR / Compliance enums ─────────────────────────────────────────────────────
+
+class SCRStatus(str, enum.Enum):
+    """Ofsted-facing Single Central Record compliance status per worker."""
+    incomplete = "incomplete"
+    pending_review = "pending_review"
+    verified_pending_physical = "verified_pending_physical"
+    compliant = "compliant"
+    suspended = "suspended"
+
+
+class ReferenceStatus(str, enum.Enum):
+    pending = "pending"
+    requested = "requested"
+    received_unverified = "received_unverified"
+    verified = "verified"
+
+
+class DBSApplicationStatus(str, enum.Enum):
+    not_started = "not_started"
+    in_flight = "in_flight"
+    completed = "completed"
+
+
+class DBSUpdateResult(str, enum.Enum):
+    not_checked = "not_checked"
+    up_to_date = "up_to_date"
+    new_information = "new_information"
+    no_result_found = "no_result_found"
+
+
+class IDVerificationMethod(str, enum.Enum):
+    """How the worker's identity was initially verified."""
+    not_selected = "not_selected"
+    third_party_digital = "third_party_digital"
+    school_in_person = "school_in_person"
+    school_video_call = "school_video_call"
+
+
+class SafeguardingGate(str, enum.Enum):
+    kcsie_read = "kcsie_read"
+    policy_signed = "policy_signed"
+    quiz_passed = "quiz_passed"

@@ -15,6 +15,15 @@ from app.models.availability import WorkerAvailability, WorkerAvailabilityPrefer
 from app.models.booking import Booking, BookingOffer, BookingStatusHistory
 from app.models.timesheet import Timesheet, TimesheetCorrection
 from app.models.user_assignment import UserSchoolAssignment
+from app.models.scr import (
+    SCRRecord,
+    WorkerAgreement,
+    WorkerReference,
+    WorkerSafeguardingInduction,
+    SafeguardingQuizQuestion,
+    SafeguardingQuizAttempt,
+    TrustSettings,
+)
 
 __all__ = [
     "Base",
@@ -38,4 +47,11 @@ __all__ = [
     "Timesheet",
     "TimesheetCorrection",
     "UserSchoolAssignment",
+    "SCRRecord",
+    "WorkerAgreement",
+    "WorkerReference",
+    "WorkerSafeguardingInduction",
+    "SafeguardingQuizQuestion",
+    "SafeguardingQuizAttempt",
+    "TrustSettings",
 ]

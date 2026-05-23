@@ -76,6 +76,18 @@ class DBSCheck(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
     storage_path: Mapped[str | None] = mapped_column(Text)
 
+    # Extended tracking fields (added migration 0006)
+    application_status: Mapped[str] = mapped_column(
+        PGEnum("not_started", "in_flight", "completed", name="dbs_application_status", create_type=False),
+        nullable=False, default="not_started",
+    )
+    external_portal_reference: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_update_check_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_update_result: Mapped[str] = mapped_column(
+        PGEnum("not_checked", "up_to_date", "new_information", "no_result_found", name="dbs_update_result", create_type=False),
+        nullable=False, default="not_checked",
+    )
+
     worker: Mapped["WorkerProfile"] = relationship(  # noqa: F821
         "WorkerProfile", back_populates="dbs_checks", lazy="noload"
     )
