@@ -25,9 +25,9 @@ router = APIRouter(prefix="/health", tags=["Health"])
 _VERSION = "0.1.0"
 
 
-@router.get("", response_model=HealthStatus, summary="Liveness probe")
+@router.api_route("", methods=["GET", "HEAD"], response_model=HealthStatus, summary="Liveness probe")
 async def health() -> HealthStatus:
-    """Returns 200 immediately — used by load balancers to detect process health."""
+    """Returns 200 immediately — used by load balancers and uptime monitors."""
     settings = get_settings()
     return HealthStatus(
         status="ok",
