@@ -12,7 +12,7 @@ Adding a new domain router:
 from fastapi import APIRouter
 
 from app.config import get_settings
-from app.routers.v1 import auth, example, health
+from app.routers.v1 import auth, example, health, worker_registration
 from app.routers.v1 import (
     workers,
     onboarding,
@@ -39,6 +39,7 @@ api_router = APIRouter(prefix=settings.api_v1_prefix)
 api_router.include_router(health.router)
 api_router.include_router(auth.router)
 api_router.include_router(example.router)
+api_router.include_router(worker_registration.router)
 
 # Compliance Vault V1
 api_router.include_router(workers.router)
