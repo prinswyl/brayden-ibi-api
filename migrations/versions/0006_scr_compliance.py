@@ -41,24 +41,12 @@ id_verification_method_enum = postgresql.ENUM(
 
 
 def upgrade() -> None:
-    # ── Create enum types (idempotent) ────────────────────────────────────────
-    op.execute("""
-    DO $$ BEGIN
-        CREATE TYPE scr_status AS ENUM ('incomplete','pending_review','verified_pending_physical','compliant','suspended');
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    DO $$ BEGIN
-        CREATE TYPE reference_status AS ENUM ('pending','requested','received_unverified','verified');
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    DO $$ BEGIN
-        CREATE TYPE dbs_application_status AS ENUM ('not_started','in_flight','completed');
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    DO $$ BEGIN
-        CREATE TYPE dbs_update_result AS ENUM ('not_checked','up_to_date','new_information','no_result_found');
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    DO $$ BEGIN
-        CREATE TYPE id_verification_method AS ENUM ('not_selected','third_party_digital','school_in_person','school_video_call');
-    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-    """)
+    # ── Create enum types (one op.execute per statement — asyncpg limitation) ─
+    op.execute("DO $$ BEGIN CREATE TYPE scr_status AS ENUM ('incomplete','pending_review','verified_pending_physical','compliant','suspended'); EXCEPTION WHEN duplicate_object THEN NULL; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE reference_status AS ENUM ('pending','requested','received_unverified','verified'); EXCEPTION WHEN duplicate_object THEN NULL; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE dbs_application_status AS ENUM ('not_started','in_flight','completed'); EXCEPTION WHEN duplicate_object THEN NULL; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE dbs_update_result AS ENUM ('not_checked','up_to_date','new_information','no_result_found'); EXCEPTION WHEN duplicate_object THEN NULL; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE id_verification_method AS ENUM ('not_selected','third_party_digital','school_in_person','school_video_call'); EXCEPTION WHEN duplicate_object THEN NULL; END $$")
 
     # ── trust_settings ────────────────────────────────────────────────────────
     op.create_table(
