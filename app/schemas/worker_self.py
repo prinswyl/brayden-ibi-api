@@ -14,6 +14,9 @@ class WorkerSelfUpdateRequest(BaseModel):
     phone: str | None = Field(None, max_length=30)
     date_of_birth: date | None = None
     ni_number: str | None = Field(None, max_length=20)
+    home_address: str | None = None
+    home_city: str | None = Field(None, max_length=100)
+    home_county: str | None = Field(None, max_length=100)
     home_postcode: str | None = Field(None, max_length=10)
     teacher_reference_number: str | None = Field(None, max_length=20)
     emergency_contact_name: str | None = Field(None, max_length=100)
@@ -23,6 +26,12 @@ class WorkerSelfUpdateRequest(BaseModel):
     disability_declared: bool | None = None
     overseas_checks_required: bool | None = None
     overseas_checks_details: str | None = None
+    rtw_doc_type: str | None = Field(None, max_length=50)
+    rtw_doc_number: str | None = Field(None, max_length=50)
+    rtw_passport_number: str | None = Field(None, max_length=50)
+    rtw_passport_issue_date: date | None = None
+    rtw_passport_expiry_date: date | None = None
+    rtw_document_storage_path: str | None = None
 
 
 class WorkerMeResponse(BaseModel):
@@ -36,6 +45,9 @@ class WorkerMeResponse(BaseModel):
     phone: str | None
     date_of_birth: date | None
     ni_number: str | None
+    home_address: str | None
+    home_city: str | None
+    home_county: str | None
     home_postcode: str | None
     teacher_reference_number: str | None
     emergency_contact_name: str | None
@@ -45,6 +57,11 @@ class WorkerMeResponse(BaseModel):
     disability_declared: bool | None
     overseas_checks_required: bool
     overseas_checks_details: str | None
+    rtw_doc_type: str | None
+    rtw_doc_number: str | None
+    rtw_passport_number: str | None
+    rtw_passport_issue_date: date | None
+    rtw_passport_expiry_date: date | None
     onboarding_status: str
     scr_status: SCRStatus | None
     agreement_signed: bool

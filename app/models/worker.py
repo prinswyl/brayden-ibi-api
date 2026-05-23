@@ -63,11 +63,22 @@ class WorkerProfile(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Bas
     overseas_checks_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     overseas_checks_details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Home location and travel radius
+    # Home address
+    home_address: Mapped[str | None] = mapped_column(Text)
+    home_city: Mapped[str | None] = mapped_column(Text)
+    home_county: Mapped[str | None] = mapped_column(Text)
     home_postcode: Mapped[str | None] = mapped_column(Text)
     home_latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     home_longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     radius_km: Mapped[int] = mapped_column(Integer, nullable=False, default=25)
+
+    # Right-to-work document details (self-declared)
+    rtw_doc_type: Mapped[str | None] = mapped_column(Text)
+    rtw_doc_number: Mapped[str | None] = mapped_column(Text)
+    rtw_passport_number: Mapped[str | None] = mapped_column(Text)
+    rtw_passport_issue_date: Mapped[date | None] = mapped_column(Date)
+    rtw_passport_expiry_date: Mapped[date | None] = mapped_column(Date)
+    rtw_document_storage_path: Mapped[str | None] = mapped_column(Text)
 
     # Relationships
     compliance_documents: Mapped[list["ComplianceDocument"]] = relationship(  # noqa: F821
