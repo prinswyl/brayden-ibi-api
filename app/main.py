@@ -45,14 +45,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
 
     # Run pending Alembic migrations before accepting traffic
-    try:
-        from alembic.config import Config
-        from alembic import command as alembic_command
-        alembic_cfg = Config("alembic.ini")
-        alembic_command.upgrade(alembic_cfg, "head")
-        logger.info("Database migrations applied")
-    except Exception as exc:
-        logger.error("Migration failed — continuing startup", error=str(exc))
+    import subprocess, sys
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        logger.info("Database migrations applied", output=result.stdout.strip())
+    else:
+        logger.error("Migration failed — continuing startup", stderr=result.stderr.strip())
 
     init_db()
     await on_startup()
