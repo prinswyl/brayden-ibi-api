@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings, Settings
 from app.core.auth import validate_token
-from app.core.dependencies import get_db
+from app.core.dependencies import get_public_db
 from app.services.worker_registration import WorkerRegistrationService
 from app.shared.exceptions import InvalidTokenError
 
@@ -43,7 +43,7 @@ class WorkerRegisterResponse(BaseModel):
 async def register_worker(
     body: WorkerRegisterRequest,
     authorization: str | None = Header(default=None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_public_db),
     settings: Settings = Depends(get_settings),
 ) -> WorkerRegisterResponse:
     """

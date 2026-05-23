@@ -66,6 +66,22 @@ async def get_superadmin_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+async def get_public_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Unauthenticated database session for public endpoints (e.g. worker
+    self-registration). No auth dependency or RLS context is set — callers
+    that need RLS must execute set_config() statements manually.
+    """
+    factory = get_session_factory()
+    async with factory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
 async def _apply_rls_context(session: AsyncSession, user: CurrentUser) -> None:
     """Execute SET LOCAL statements to activate RLS for this session."""
     stmts = [

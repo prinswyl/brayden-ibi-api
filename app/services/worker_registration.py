@@ -17,7 +17,7 @@ yet. This service:
 from uuid import UUID
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.trust import Trust
@@ -55,6 +55,15 @@ class WorkerRegistrationService:
         """
         # 1. Resolve trust by slug
         trust = await self._get_trust_by_slug(trust_slug)
+
+        # Set RLS session context so INSERT policies accept this session
+        await self._session.execute(
+            text("SELECT set_config('app.current_trust_id', :v, true)").bindparams(v=str(trust.id))
+        )
+        await self._session.execute(
+            text("SELECT set_config('app.current_user_id', :v, true)").bindparams(v=str(auth_user_id))
+        )
+        await self._session.execute(text("SELECT set_config('app.is_superadmin', 'false', true)"))
 
         # 2. Check for existing user (idempotent re-submit)
         existing = await self._user_repo.get_by_email(email)
