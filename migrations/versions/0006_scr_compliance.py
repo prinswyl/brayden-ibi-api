@@ -41,12 +41,24 @@ id_verification_method_enum = postgresql.ENUM(
 
 
 def upgrade() -> None:
-    # ── Create enum types ─────────────────────────────────────────────────────
-    op.execute("CREATE TYPE scr_status AS ENUM ('incomplete','pending_review','verified_pending_physical','compliant','suspended')")
-    op.execute("CREATE TYPE reference_status AS ENUM ('pending','requested','received_unverified','verified')")
-    op.execute("CREATE TYPE dbs_application_status AS ENUM ('not_started','in_flight','completed')")
-    op.execute("CREATE TYPE dbs_update_result AS ENUM ('not_checked','up_to_date','new_information','no_result_found')")
-    op.execute("CREATE TYPE id_verification_method AS ENUM ('not_selected','third_party_digital','school_in_person','school_video_call')")
+    # ── Create enum types (idempotent) ────────────────────────────────────────
+    op.execute("""
+    DO $$ BEGIN
+        CREATE TYPE scr_status AS ENUM ('incomplete','pending_review','verified_pending_physical','compliant','suspended');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+        CREATE TYPE reference_status AS ENUM ('pending','requested','received_unverified','verified');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+        CREATE TYPE dbs_application_status AS ENUM ('not_started','in_flight','completed');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+        CREATE TYPE dbs_update_result AS ENUM ('not_checked','up_to_date','new_information','no_result_found');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    DO $$ BEGIN
+        CREATE TYPE id_verification_method AS ENUM ('not_selected','third_party_digital','school_in_person','school_video_call');
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    """)
 
     # ── trust_settings ────────────────────────────────────────────────────────
     op.create_table(
@@ -232,24 +244,16 @@ def upgrade() -> None:
         sa.Column("attempted_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     )
 
-    # ── Extend worker_profiles ────────────────────────────────────────────────
-    op.add_column("worker_profiles", sa.Column("teacher_reference_number", sa.Text, nullable=True))
-    op.add_column("worker_profiles", sa.Column("overseas_checks_required", sa.Boolean, nullable=False, server_default="false"))
-    op.add_column("worker_profiles", sa.Column("overseas_checks_details", sa.Text, nullable=True))
+    # ── Extend worker_profiles (idempotent) ───────────────────────────────────
+    op.execute("ALTER TABLE worker_profiles ADD COLUMN IF NOT EXISTS teacher_reference_number TEXT")
+    op.execute("ALTER TABLE worker_profiles ADD COLUMN IF NOT EXISTS overseas_checks_required BOOLEAN NOT NULL DEFAULT false")
+    op.execute("ALTER TABLE worker_profiles ADD COLUMN IF NOT EXISTS overseas_checks_details TEXT")
 
-    # ── Extend dbs_checks ────────────────────────────────────────────────────
-    op.add_column("dbs_checks", sa.Column(
-        "application_status",
-        postgresql.ENUM("not_started", "in_flight", "completed", name="dbs_application_status", create_type=False),
-        nullable=False, server_default="not_started",
-    ))
-    op.add_column("dbs_checks", sa.Column("external_portal_reference", sa.Text, nullable=True))
-    op.add_column("dbs_checks", sa.Column("last_update_check_date", sa.Date, nullable=True))
-    op.add_column("dbs_checks", sa.Column(
-        "last_update_result",
-        postgresql.ENUM("not_checked", "up_to_date", "new_information", "no_result_found", name="dbs_update_result", create_type=False),
-        nullable=False, server_default="not_checked",
-    ))
+    # ── Extend dbs_checks (idempotent) ────────────────────────────────────────
+    op.execute("ALTER TABLE dbs_checks ADD COLUMN IF NOT EXISTS application_status dbs_application_status NOT NULL DEFAULT 'not_started'")
+    op.execute("ALTER TABLE dbs_checks ADD COLUMN IF NOT EXISTS external_portal_reference TEXT")
+    op.execute("ALTER TABLE dbs_checks ADD COLUMN IF NOT EXISTS last_update_check_date DATE")
+    op.execute("ALTER TABLE dbs_checks ADD COLUMN IF NOT EXISTS last_update_result dbs_update_result NOT NULL DEFAULT 'not_checked'")
 
     # ── Seed safeguarding quiz questions ──────────────────────────────────────
     op.execute("""

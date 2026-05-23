@@ -17,11 +17,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "bookings",
-        sa.Column("end_date", sa.Date(), nullable=True),
-    )
-    # Backfill existing rows: end_date = shift_date (single-day bookings)
+    # IF NOT EXISTS guards against re-running on a DB that already has the column
+    op.execute("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS end_date DATE")
     op.execute("UPDATE bookings SET end_date = shift_date WHERE end_date IS NULL")
 
 
