@@ -95,10 +95,12 @@ def _user_has_permission(user: CurrentUser, permission: str) -> bool:
         ROLE_TRUST_ADMIN: {"*"},
         ROLE_HR_MANAGER: {
             "workers:read", "workers:create", "workers:update",
+            "scr:read",
             "compliance_documents:read", "compliance_documents:approve",
             "compliance_documents:reject", "compliance_documents:upload",
             "dbs_checks:read", "dbs_checks:update",
             "rtw_checks:read", "rtw_checks:update",
+            "first_shift:verify",
             "bookings:read", "timesheets:read",
         },
         # Cover supervisor — the operational role that manages day-to-day cover at school level.
@@ -109,15 +111,22 @@ def _user_has_permission(user: CurrentUser, permission: str) -> bool:
             "workers:read",
             "availability:read",
         },
-        # School leader — read-only visibility of cover plans; does not create or manage bookings.
+        # School leader — full read access to SCR and compliance; can verify physical ID.
         ROLE_SCHOOL_LEADER: {
             "bookings:read",
             "timesheets:read",
             "workers:read",
+            "scr:read",
+            "compliance_documents:read",
+            "dbs_checks:read",
+            "rtw_checks:read",
+            "first_shift:verify",
+            "workers:update",  # needed to mark first_shift_cleared
         },
-        # Receptionist — records physical DBS sighting on a worker's first day at the school (SCR).
+        # Receptionist — records physical DBS sighting; sees all workers with outstanding ID check.
         ROLE_RECEPTIONIST: {
             "bookings:read",
+            "workers:read",
             "first_shift:verify",
             "workers:update",  # allowed to confirm physical ID on SCR
         },

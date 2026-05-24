@@ -32,6 +32,10 @@ class WorkerProfileUpdate(APIModel):
 
 class WorkerProfileResponse(TenantedModel):
     user_id: UUID
+    # Enriched from the linked users row — populated by list/get endpoints
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
     preferred_name: str | None
     gender: str | None
     ethnicity: str | None

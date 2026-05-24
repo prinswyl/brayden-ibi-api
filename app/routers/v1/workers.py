@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import CurrentUser, get_current_user
 from app.core.dependencies import get_db
 from app.core.permissions import require_permission
+from app.models.user import User
+from app.models.worker import WorkerProfile
 from app.schemas.worker import (
     WorkerComplianceSummaryResponse,
     WorkerProfileCreate,
@@ -29,6 +31,15 @@ from app.services.onboarding import OnboardingService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/workers", tags=["Workers"])
+
+
+def _enrich(worker: WorkerProfile, user: User) -> WorkerProfileResponse:
+    """Build a WorkerProfileResponse with name/email fields from the linked User."""
+    resp = WorkerProfileResponse.model_validate(worker)
+    resp.first_name = user.first_name
+    resp.last_name = user.last_name
+    resp.email = user.email
+    return resp
 
 
 @router.post(
@@ -62,13 +73,23 @@ async def create_worker(
 async def list_workers(
     offset: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=100),
+    onboarding_status: str | None = Query(None),
+    compliance_stage: str | None = Query(None),
+    first_shift_cleared: bool | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> WorkerProfileListResponse:
     from app.repositories.worker import WorkerRepository
+    from app.shared.enums import ComplianceStage, OnboardingStatus
     repo = WorkerRepository(db)
-    items, total = await repo.list_all(offset=offset, limit=limit)
+    pairs, total = await repo.list_with_users(
+        offset=offset,
+        limit=limit,
+        onboarding_status=OnboardingStatus(onboarding_status) if onboarding_status else None,
+        compliance_stage=ComplianceStage(compliance_stage) if compliance_stage else None,
+        first_shift_cleared=first_shift_cleared,
+    )
     return WorkerProfileListResponse(
-        items=[WorkerProfileResponse.model_validate(w) for w in items],
+        items=[_enrich(w, u) for w, u in pairs],
         total=total,
         offset=offset,
         limit=limit,
@@ -85,9 +106,13 @@ async def get_worker(
     worker_id: UUID,
     db: AsyncSession = Depends(get_db),
 ) -> WorkerProfileResponse:
-    svc = OnboardingService(db)
-    worker = await svc.get_worker(worker_id)
-    return WorkerProfileResponse.model_validate(worker)
+    from app.repositories.worker import WorkerRepository
+    repo = WorkerRepository(db)
+    row = await repo.get_with_user(worker_id)
+    if row is None:
+        from app.shared.exceptions import NotFoundError
+        raise NotFoundError("WorkerProfile", str(worker_id))
+    return _enrich(row[0], row[1])
 
 
 @router.patch(
