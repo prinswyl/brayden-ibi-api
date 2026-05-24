@@ -136,6 +136,38 @@ async def update_worker(
 
 
 @router.get(
+    "/{worker_id}/profile",
+    response_model=None,
+    summary="Full personal profile for HR/admin — includes DOB, NI, address, RTW details",
+    dependencies=[Depends(require_permission("workers:read"))],
+)
+async def get_worker_full_profile(
+    worker_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.routers.v1.worker_self import get_me as _get_me
+    from app.core.auth import CurrentUser as _CU
+    # Build a synthetic CurrentUser scoped to the worker's own user_id so
+    # the existing get_me logic resolves the correct profile.
+    from app.repositories.worker import WorkerRepository
+    repo = WorkerRepository(db)
+    row = await repo.get_with_user(worker_id)
+    if row is None:
+        from app.shared.exceptions import NotFoundError
+        raise NotFoundError("WorkerProfile", str(worker_id))
+    worker, user = row
+    # Construct a CurrentUser scoped to the worker so get_me resolves their profile
+    worker_cu = _CU(
+        user_id=user.id,
+        trust_id=worker.trust_id,
+        email=user.email,
+        roles=[],
+    )
+    return await _get_me(current_user=worker_cu, db=db)
+
+
+@router.get(
     "/{worker_id}/compliance-summary",
     response_model=WorkerComplianceSummaryResponse,
     summary="Worker aggregate compliance health",
