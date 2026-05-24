@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.orm import aliased
 
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -19,12 +20,25 @@ class UserRepository(BaseRepository[User]):
     async def list_for_trust(
         self, trust_id: UUID, *, offset: int = 0, limit: int = 25
     ) -> tuple[list[User], int]:
-        from sqlalchemy import func
-        stmt = select(User).where(User.trust_id == trust_id, User.deleted_at.is_(None))
+        # Import here to avoid circular import at module load time
+        from app.models.worker import WorkerProfile
+        from sqlalchemy import exists
+
+        # Exclude workers — a User with a WorkerProfile row is a casual bank worker,
+        # not an internal staff member. Internal staff are invited via /users/invite.
+        not_a_worker = ~exists().where(WorkerProfile.user_id == User.id)
+
+        base_where = (
+            User.trust_id == trust_id,
+            User.deleted_at.is_(None),
+            not_a_worker,
+        )
         count = (await self.session.execute(
-            select(func.count()).select_from(User).where(User.trust_id == trust_id, User.deleted_at.is_(None))
+            select(func.count()).select_from(User).where(*base_where)
         )).scalar_one()
-        result = await self.session.execute(stmt.offset(offset).limit(limit))
+        result = await self.session.execute(
+            select(User).where(*base_where).offset(offset).limit(limit)
+        )
         return list(result.scalars().all()), count
 
     async def deactivate(self, user: User) -> User:
