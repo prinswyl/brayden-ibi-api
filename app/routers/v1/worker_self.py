@@ -128,15 +128,24 @@ async def update_me(
     repo = WorkerRepository(db)
 
     update_fields = body.model_dump(exclude_none=True)
-    # phone is on User, not WorkerProfile — update separately
+    # phone, first_name, last_name are on User, not WorkerProfile — update separately
     phone = update_fields.pop("phone", None)
+    first_name = update_fields.pop("first_name", None)
+    last_name = update_fields.pop("last_name", None)
     if update_fields:
         await repo.update(worker, **update_fields)
-    if phone is not None:
+    if phone is not None or first_name is not None or last_name is not None:
         from app.repositories.user import UserRepository
         user_repo = UserRepository(db)
         user = await user_repo.get_by_id_or_404(current_user.user_id)
-        await user_repo.update(user, phone=phone)
+        user_updates: dict = {}
+        if phone is not None:
+            user_updates["phone"] = phone
+        if first_name is not None:
+            user_updates["first_name"] = first_name
+        if last_name is not None:
+            user_updates["last_name"] = last_name
+        await user_repo.update(user, **user_updates)
 
     await db.commit()
     return await get_me(current_user=current_user, db=db)

@@ -10,6 +10,8 @@ from app.shared.enums import SCRStatus
 
 class WorkerSelfUpdateRequest(BaseModel):
     """Fields a worker is permitted to update on their own profile."""
+    first_name: str | None = Field(None, max_length=100)
+    last_name: str | None = Field(None, max_length=100)
     preferred_name: str | None = Field(None, max_length=100)
     phone: str | None = Field(None, max_length=30)
     date_of_birth: date | None = None
