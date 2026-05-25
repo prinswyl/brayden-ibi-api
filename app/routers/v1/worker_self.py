@@ -6,15 +6,21 @@ No worker_id path param — identity is derived from the JWT.
 
   GET    /api/v1/workers/me
   PATCH  /api/v1/workers/me
+  POST   /api/v1/workers/me/submit
   POST   /api/v1/workers/me/agreement
+  GET    /api/v1/workers/me/trust-settings
   GET    /api/v1/workers/me/scr
   GET    /api/v1/workers/me/references
   POST   /api/v1/workers/me/references
+  POST   /api/v1/workers/me/dbs/link-update-service
+  POST   /api/v1/workers/me/dbs/start-application
   GET    /api/v1/workers/me/safeguarding
   POST   /api/v1/workers/me/safeguarding/kcsie-read
   POST   /api/v1/workers/me/safeguarding/policy-signed
   GET    /api/v1/workers/me/safeguarding/quiz
   POST   /api/v1/workers/me/safeguarding/quiz-submit
+  GET    /api/v1/workers/me/school-preferences
+  PUT    /api/v1/workers/me/school-preferences
 """
 
 from datetime import UTC, datetime
@@ -39,6 +45,8 @@ from app.schemas.scr import SCRStatusSummary
 from app.schemas.worker_self import (
     SignAgreementRequest,
     TrustSettingsResponse,
+    WorkerDbsLinkUpdateServiceRequest,
+    WorkerDbsStartApplicationRequest,
     WorkerMeResponse,
     WorkerReferenceRequest,
     WorkerReferenceResponse,
@@ -152,6 +160,24 @@ async def update_me(
     return await get_me(current_user=current_user, db=db)
 
 
+@router.post("/submit", response_model=WorkerMeResponse)
+async def submit_application(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Worker submits their completed application for HR review."""
+    from app.shared.enums import OnboardingStatus
+    worker = await _get_worker_profile(current_user, db)
+    if worker.onboarding_status not in (OnboardingStatus.draft,):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Application is already in status '{worker.onboarding_status.value}' and cannot be re-submitted."
+        )
+    worker.onboarding_status = OnboardingStatus.submitted
+    await db.commit()
+    return await get_me(current_user=current_user, db=db)
+
+
 @router.get("/trust-settings", response_model=TrustSettingsResponse)
 async def get_worker_trust_settings(
     current_user: CurrentUser = Depends(get_current_user),
@@ -202,6 +228,57 @@ async def sign_agreement(
     db.add(agreement)
     await db.commit()
     return {"message": "Agreement signed successfully.", "signed_at": agreement.signed_at}
+
+
+@router.post("/dbs/link-update-service")
+async def dbs_link_update_service(
+    body: WorkerDbsLinkUpdateServiceRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Worker links an existing DBS certificate to the Update Service.
+
+    Creates (or updates) the worker's SCR record to reflect they hold a valid
+    Enhanced DBS on the Update Service, allowing the trust to run status checks.
+    """
+    from app.shared.enums import DBSApplicationStatus
+    worker = await _get_worker_profile(current_user, db)
+    scr_svc = SCRService(db)
+    scr = await scr_svc.get_or_create(worker.id, worker.trust_id)
+    scr.dbs_certificate_number = body.dbs_certificate_number
+    scr.dbs_update_service_linked = True
+    scr.dbs_application_status = DBSApplicationStatus.completed
+    # Store certificate name in notes — no dedicated column exists yet
+    scr.initial_id_notes = f"DBS certificate name: {body.dbs_certificate_name}"
+    await db.commit()
+    return {"message": "DBS Update Service details saved."}
+
+
+@router.post("/dbs/start-application")
+async def dbs_start_application(
+    body: WorkerDbsStartApplicationRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Worker records their chosen identity verification method for a fresh DBS application.
+
+    Creates (or updates) the worker's SCR record to status 'in_flight' so HR
+    can track that the worker has initiated their DBS application.
+    """
+    from app.shared.enums import DBSApplicationStatus, IDVerificationMethod
+    worker = await _get_worker_profile(current_user, db)
+    scr_svc = SCRService(db)
+    scr = await scr_svc.get_or_create(worker.id, worker.trust_id)
+    scr.dbs_application_status = DBSApplicationStatus.in_flight
+    try:
+        scr.id_verification_method = IDVerificationMethod(body.id_verification_method)
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid id_verification_method: '{body.id_verification_method}'."
+        )
+    await db.commit()
+    return {"message": "DBS application recorded."}
 
 
 @router.get("/scr", response_model=SCRStatusSummary)

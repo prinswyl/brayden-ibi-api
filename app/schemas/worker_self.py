@@ -158,3 +158,15 @@ class TrustSettingsUpdateRequest(BaseModel):
     dsl_phone: str | None = None
     casual_worker_agreement_version: str | None = None
     casual_worker_agreement_html: str | None = None
+
+
+class WorkerDbsLinkUpdateServiceRequest(BaseModel):
+    """Worker links an existing Enhanced DBS certificate to the Update Service."""
+    dbs_certificate_number: str = Field(..., max_length=10)
+    dbs_certificate_name: str = Field(..., max_length=150, description="Full name exactly as stated on the DBS certificate")
+    date_of_birth: date | None = None
+
+
+class WorkerDbsStartApplicationRequest(BaseModel):
+    """Worker records their chosen identity verification method for a fresh DBS application."""
+    id_verification_method: str = Field(..., max_length=50)
