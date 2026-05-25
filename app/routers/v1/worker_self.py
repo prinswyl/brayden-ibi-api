@@ -151,6 +151,23 @@ async def update_me(
     return await get_me(current_user=current_user, db=db)
 
 
+@router.get("/trust-settings", response_model=TrustSettingsResponse)
+async def get_worker_trust_settings(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the trust's public-facing configuration needed during worker onboarding."""
+    svc = TrustSettingsService(db)
+    settings = await svc.get(current_user.trust_id)
+    if not settings:
+        from app.models.scr import TrustSettings as TrustSettingsModel
+        return TrustSettingsResponse.model_validate(TrustSettingsModel(
+            trust_id=current_user.trust_id,
+            casual_worker_agreement_version="1.0",
+        ))
+    return TrustSettingsResponse.model_validate(settings)
+
+
 @router.post("/agreement", status_code=201)
 async def sign_agreement(
     body: SignAgreementRequest,
