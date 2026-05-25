@@ -41,5 +41,10 @@ class UserRepository(BaseRepository[User]):
         )
         return list(result.scalars().all()), count
 
+    async def activate(self, user: User) -> User:
+        if user.status == UserStatus.invited:
+            return await self.update(user, status=UserStatus.active)
+        return user
+
     async def deactivate(self, user: User) -> User:
         return await self.update(user, status=UserStatus.suspended)

@@ -151,6 +151,28 @@ class BookingService:
         ))
         return booking
 
+    async def update_booking(
+        self,
+        booking_id: UUID,
+        body,
+        *,
+        current_user: CurrentUser,
+    ) -> Booking:
+        booking = await self._bookings.get_by_id_or_404(booking_id)
+        updates = {k: v for k, v in body.model_dump(exclude_none=True).items()}
+        if not updates:
+            return booking
+        old_values = {k: getattr(booking, k) for k in updates}
+        booking = await self._bookings.update(booking, **updates)
+        await audit_log(
+            self._session, action=core.audit.AuditAction.update,
+            resource_type="bookings", resource_id=booking.id,
+            trust_id=booking.trust_id, user_id=current_user.user_id,
+            old_values={str(k): str(v) for k, v in old_values.items()},
+            new_values={str(k): str(v) for k, v in updates.items()},
+        )
+        return booking
+
     async def dispatch_offers(
         self,
         booking_id: UUID,

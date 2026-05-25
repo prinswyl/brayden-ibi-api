@@ -107,6 +107,20 @@ class DispatchOffersRequest(BaseModel):
     school_lon: Decimal | None = None
 
 
+class BookingUpdate(BaseModel):
+    school_id: UUID | None = None
+    role_type_id: UUID | None = None
+    shift_date: date | None = None
+    end_date: date | None = None
+    start_time: time | None = None
+    end_time: time | None = None
+    agreed_hourly_rate: Decimal | None = None
+    urgency: UrgencyLevel | None = None
+    reason: str | None = None
+    notes: str | None = None
+    offer_expires_at: datetime | None = None
+
+
 class BookingListResponse(BaseModel):
     items: list[BookingResponse]
     total: int

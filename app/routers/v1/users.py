@@ -66,8 +66,11 @@ async def get_me(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserWithAssignmentsResponse:
+    from app.repositories.user import UserRepository
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_id_or_404(current_user.user_id)
+    user = await user_repo.activate(user)
     svc = UserProvisioningService(db)
-    user = await svc.get_user(current_user.user_id)
     assignments = await svc.get_user_assignments(current_user.user_id)
     user_resp = UserResponse.model_validate(user)
     return UserWithAssignmentsResponse(

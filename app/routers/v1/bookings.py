@@ -13,6 +13,7 @@ from app.schemas.booking import (
     BookingOfferResponse,
     BookingResponse,
     BookingStatusHistoryResponse,
+    BookingUpdate,
     CancelBookingRequest,
     DeclineOfferRequest,
     DispatchOffersRequest,
@@ -71,6 +72,17 @@ async def get_booking(
 ):
     svc = BookingService(db)
     return await svc.get_booking(booking_id)
+
+
+@router.patch("/{booking_id}", response_model=BookingResponse)
+async def update_booking(
+    booking_id: UUID,
+    body: BookingUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("bookings:create")),
+):
+    svc = BookingService(db)
+    return await svc.update_booking(booking_id, body, current_user=current_user)
 
 
 @router.post("/{booking_id}/dispatch", response_model=BookingResponse)
