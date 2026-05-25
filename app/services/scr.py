@@ -279,6 +279,74 @@ class SCRService:
         await self._audit(scr, "scr_status", SCRStatus.suspended, scr.scr_status, current_user)
         return scr
 
+    # ── SCR register (bulk cross-worker view) ────────────────────────────────
+
+    async def list_register(
+        self, trust_id: UUID, limit: int = 100, offset: int = 0
+    ) -> tuple[list, int]:
+        from sqlalchemy import func, outerjoin
+        from app.models.user import User
+        from app.models.worker import WorkerProfile
+        from app.schemas.scr import WorkerSCRRegisterRow
+
+        count_q = (
+            select(func.count())
+            .select_from(WorkerProfile)
+            .where(WorkerProfile.trust_id == trust_id, WorkerProfile.deleted_at.is_(None))
+        )
+        total: int = (await self._session.execute(count_q)).scalar_one()
+
+        q = (
+            select(WorkerProfile, User, SCRRecord)
+            .join(User, WorkerProfile.user_id == User.id)
+            .outerjoin(SCRRecord, SCRRecord.worker_id == WorkerProfile.id)
+            .where(WorkerProfile.trust_id == trust_id, WorkerProfile.deleted_at.is_(None))
+            .order_by(User.last_name, User.first_name)
+            .limit(limit)
+            .offset(offset)
+        )
+        rows = (await self._session.execute(q)).all()
+
+        def _str(v: object) -> str:
+            return v.value if hasattr(v, "value") else str(v)
+
+        items = [
+            WorkerSCRRegisterRow(
+                id=wp.id,
+                user_id=wp.user_id,
+                first_name=u.first_name,
+                last_name=u.last_name,
+                email=u.email,
+                onboarding_status=_str(wp.onboarding_status),
+                compliance_stage=_str(wp.compliance_stage),
+                first_shift_cleared=wp.first_shift_cleared,
+                is_amber=wp.is_amber,
+                compliance_expires_at=wp.compliance_expires_at,
+                scr_status=scr.scr_status if scr else None,
+                physical_id_confirmed=scr.physical_id_confirmed if scr else False,
+                physical_id_confirmed_date=scr.physical_id_confirmed_date if scr else None,
+                physical_id_confirmed_location=scr.physical_id_confirmed_location if scr else None,
+                id_verification_method=scr.id_verification_method if scr else None,
+                rtw_checked_date=scr.rtw_checked_date if scr else None,
+                rtw_evidence_type=scr.rtw_evidence_type if scr else None,
+                dbs_application_status=scr.dbs_application_status if scr else None,
+                dbs_certificate_number=scr.dbs_certificate_number if scr else None,
+                dbs_issue_date=scr.dbs_issue_date if scr else None,
+                dbs_checked_date=scr.dbs_checked_date if scr else None,
+                dbs_update_service_linked=scr.dbs_update_service_linked if scr else False,
+                barred_list_checked_date=scr.barred_list_checked_date if scr else None,
+                tra_prohibition_checked_date=scr.tra_prohibition_checked_date if scr else None,
+                qualifications_checked_date=scr.qualifications_checked_date if scr else None,
+                reference_1_status=scr.reference_1_status if scr else None,
+                reference_1_verified_date=scr.reference_1_verified_date if scr else None,
+                reference_2_status=scr.reference_2_status if scr else None,
+                reference_2_verified_date=scr.reference_2_verified_date if scr else None,
+                overseas_checks_required=scr.overseas_checks_required if scr else False,
+            )
+            for wp, u, scr in rows
+        ]
+        return items, total
+
     # ── Export ────────────────────────────────────────────────────────────────
 
     async def export_csv(self, trust_id: UUID) -> str:

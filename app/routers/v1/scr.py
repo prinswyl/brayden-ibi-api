@@ -30,6 +30,7 @@ from app.schemas.scr import (
     RecordInitialIDCheckRequest,
     RecordRTWCheckRequest,
     SCRRecordResponse,
+    SCRRegisterResponse,
     SetIDVerificationMethodRequest,
     UpdateDBSRequest,
 )
@@ -237,6 +238,23 @@ async def list_worker_references(
     )
     from app.schemas.worker_self import WorkerReferenceResponse
     return [WorkerReferenceResponse.model_validate(r) for r in result.scalars().all()]
+
+
+@router.get(
+    "/scr/register",
+    response_model=SCRRegisterResponse,
+    dependencies=[Depends(require_permission("workers:read"))],
+    summary="Full SCR register — all workers with their compliance checks",
+)
+async def get_scr_register(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    svc = SCRService(db)
+    items, total = await svc.list_register(current_user.trust_id, limit=limit, offset=offset)
+    return SCRRegisterResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get(

@@ -3,12 +3,14 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.shared.enums import (
+    ComplianceStage,
     DBSApplicationStatus,
     DBSUpdateResult,
     IDVerificationMethod,
+    OnboardingStatus,
     ReferenceStatus,
     SCRStatus,
 )
@@ -95,6 +97,53 @@ class AdvanceReferenceStatusRequest(BaseModel):
 
 class RecordCheckRequest(BaseModel):
     checked_date: date
+
+
+# ── SCR register (full cross-worker view) ────────────────────────────────────
+
+class WorkerSCRRegisterRow(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    # Worker identity
+    id: UUID
+    user_id: UUID
+    first_name: str
+    last_name: str
+    email: str
+    onboarding_status: str
+    compliance_stage: str
+    first_shift_cleared: bool
+    is_amber: bool
+    compliance_expires_at: datetime | None
+
+    # SCR fields — null when no SCR record exists yet
+    scr_status: SCRStatus | None = None
+    physical_id_confirmed: bool = False
+    physical_id_confirmed_date: date | None = None
+    physical_id_confirmed_location: str | None = None
+    id_verification_method: IDVerificationMethod | None = None
+    rtw_checked_date: date | None = None
+    rtw_evidence_type: str | None = None
+    dbs_application_status: DBSApplicationStatus | None = None
+    dbs_certificate_number: str | None = None
+    dbs_issue_date: date | None = None
+    dbs_checked_date: date | None = None
+    dbs_update_service_linked: bool = False
+    barred_list_checked_date: date | None = None
+    tra_prohibition_checked_date: date | None = None
+    qualifications_checked_date: date | None = None
+    reference_1_status: ReferenceStatus | None = None
+    reference_1_verified_date: date | None = None
+    reference_2_status: ReferenceStatus | None = None
+    reference_2_verified_date: date | None = None
+    overseas_checks_required: bool = False
+
+
+class SCRRegisterResponse(BaseModel):
+    items: list[WorkerSCRRegisterRow]
+    total: int
+    limit: int
+    offset: int
 
 
 # ── Worker self-view ──────────────────────────────────────────────────────────
