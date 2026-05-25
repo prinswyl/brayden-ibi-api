@@ -136,6 +136,7 @@ class TrustSettingsResponse(BaseModel):
     dsl_email: str | None
     dsl_phone: str | None
     casual_worker_agreement_version: str
+    casual_worker_agreement_html: str | None
 
     model_config = {"from_attributes": True}
 
@@ -154,3 +155,4 @@ class TrustSettingsUpdateRequest(BaseModel):
     dsl_email: str | None = None
     dsl_phone: str | None = None
     casual_worker_agreement_version: str | None = None
+    casual_worker_agreement_html: str | None = None

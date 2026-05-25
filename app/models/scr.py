@@ -237,3 +237,4 @@ class TrustSettings(UUIDMixin, TimestampMixin, Base):
     dsl_phone: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     casual_worker_agreement_version: Mapped[str] = mapped_column(Text, nullable=False, default="1.0")
+    casual_worker_agreement_html: Mapped[str | None] = mapped_column(Text, nullable=True)
