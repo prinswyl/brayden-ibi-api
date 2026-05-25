@@ -42,6 +42,8 @@ from app.schemas.worker_self import (
     WorkerReferenceRequest,
     WorkerReferenceResponse,
     WorkerSelfUpdateRequest,
+    WorkerSchoolPreferenceResponse,
+    WorkerSchoolPreferencesUpsert,
 )
 from app.services.safeguarding import SafeguardingService
 from app.services.scr import SCRService
@@ -335,3 +337,92 @@ async def submit_quiz(
         correct_answers={qid: q.correct_option for qid, q in questions.items()},
         explanations={qid: (q.explanation or "") for qid, q in questions.items()},
     )
+
+
+# ── School preferences ────────────────────────────────────────────────────────
+
+@router.get(
+    "/school-preferences",
+    response_model=list[WorkerSchoolPreferenceResponse],
+    summary="Get worker's ranked school preferences",
+)
+async def get_school_preferences(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[WorkerSchoolPreferenceResponse]:
+    from sqlalchemy import select as sa_select2
+    from app.models.worker import WorkerSchoolPreference
+    from app.models.school import School
+
+    worker = await _get_worker_profile(current_user, db)
+    result = await db.execute(
+        sa_select2(WorkerSchoolPreference, School)
+        .join(School, School.id == WorkerSchoolPreference.school_id)
+        .where(WorkerSchoolPreference.worker_id == worker.id)
+        .order_by(WorkerSchoolPreference.rank)
+    )
+    return [
+        WorkerSchoolPreferenceResponse(
+            rank=pref.rank,
+            school_id=pref.school_id,
+            school_name=school.name,
+            school_city=school.city,
+            school_postcode=school.postcode,
+        )
+        for pref, school in result.all()
+    ]
+
+
+@router.put(
+    "/school-preferences",
+    response_model=list[WorkerSchoolPreferenceResponse],
+    summary="Set worker's ranked school preferences (replaces all existing)",
+)
+async def set_school_preferences(
+    body: WorkerSchoolPreferencesUpsert,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[WorkerSchoolPreferenceResponse]:
+    from sqlalchemy import select as sa_select3, delete as sa_delete
+    from app.models.worker import WorkerSchoolPreference
+    from app.models.school import School
+
+    worker = await _get_worker_profile(current_user, db)
+
+    # Validate all referenced schools belong to the worker's trust
+    school_ids = [p.school_id for p in body.preferences]
+    schools_result = await db.execute(
+        sa_select3(School).where(
+            School.id.in_(school_ids),
+            School.trust_id == worker.trust_id,
+            School.deleted_at.is_(None),
+        )
+    )
+    schools_map = {s.id: s for s in schools_result.scalars().all()}
+    missing = [str(sid) for sid in school_ids if sid not in schools_map]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Schools not found in trust: {missing}")
+
+    # Replace all preferences atomically
+    await db.execute(
+        sa_delete(WorkerSchoolPreference).where(WorkerSchoolPreference.worker_id == worker.id)
+    )
+    for item in body.preferences:
+        db.add(WorkerSchoolPreference(
+            worker_id=worker.id,
+            trust_id=worker.trust_id,
+            school_id=item.school_id,
+            rank=item.rank,
+        ))
+    await db.commit()
+
+    return [
+        WorkerSchoolPreferenceResponse(
+            rank=item.rank,
+            school_id=item.school_id,
+            school_name=schools_map[item.school_id].name,
+            school_city=schools_map[item.school_id].city,
+            school_postcode=schools_map[item.school_id].postcode,
+        )
+        for item in sorted(body.preferences, key=lambda x: x.rank)
+    ]

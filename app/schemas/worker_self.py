@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.shared.enums import SCRStatus
 
@@ -66,6 +66,25 @@ class WorkerMeResponse(BaseModel):
     scr_status: SCRStatus | None
     agreement_signed: bool
     safeguarding_complete: bool
+
+
+class WorkerSchoolPreferenceItem(BaseModel):
+    rank: int = Field(..., ge=1, le=5)
+    school_id: UUID
+
+
+class WorkerSchoolPreferencesUpsert(BaseModel):
+    preferences: list[WorkerSchoolPreferenceItem] = Field(..., max_length=5)
+
+
+class WorkerSchoolPreferenceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    rank: int
+    school_id: UUID
+    school_name: str
+    school_city: str | None
+    school_postcode: str | None
 
 
 class SignAgreementRequest(BaseModel):

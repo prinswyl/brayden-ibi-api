@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, Text
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ENUM as PGEnum, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -115,3 +115,20 @@ class WorkerRoleAssignment(UUIDMixin, TenantMixin, Base):
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     verified_at: Mapped[datetime | None] = mapped_column(nullable=True)
     verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+
+class WorkerSchoolPreference(UUIDMixin, TimestampMixin, TenantMixin, Base):
+    """Ranked list of preferred schools (up to 5) set by the worker during onboarding."""
+    __tablename__ = "worker_school_preferences"
+    __table_args__ = (
+        UniqueConstraint("worker_id", "rank", name="uq_wsp_worker_rank"),
+        UniqueConstraint("worker_id", "school_id", name="uq_wsp_worker_school"),
+    )
+
+    worker_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("worker_profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    school_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("schools.id"), nullable=False
+    )
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
