@@ -38,6 +38,7 @@ from app.schemas.safeguarding import (
 from app.schemas.scr import SCRStatusSummary
 from app.schemas.worker_self import (
     SignAgreementRequest,
+    TrustSettingsResponse,
     WorkerMeResponse,
     WorkerReferenceRequest,
     WorkerReferenceResponse,
