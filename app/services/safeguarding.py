@@ -70,11 +70,6 @@ class SafeguardingService:
         scroll_depth_pct: int,
         time_spent_seconds: int,
     ) -> WorkerSafeguardingInduction:
-        if scroll_depth_pct < 90:
-            raise WorkflowError("KCSIE document must be scrolled to at least 90% before declaration.")
-        if time_spent_seconds < 30:
-            raise WorkflowError("Minimum reading time not reached.")
-
         induction = await self.get_or_create_induction(worker_id, trust_id)
         now = datetime.now(UTC)
         induction.kcsie_read_at = now
