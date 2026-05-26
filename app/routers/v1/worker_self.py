@@ -443,6 +443,41 @@ async def submit_quiz(
     )
 
 
+# ── Schools (worker-accessible list) ─────────────────────────────────────────
+
+@router.get(
+    "/schools",
+    summary="List active schools in the worker's trust (no admin permission required)",
+)
+async def list_schools_for_worker(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all active schools belonging to the worker's trust.
+    Used by the onboarding form to populate school preference dropdowns.
+    """
+    from sqlalchemy import select as sa_select4
+    from app.models.school import School
+
+    result = await db.execute(
+        sa_select4(School).where(
+            School.trust_id == current_user.trust_id,
+            School.is_active.is_(True),
+            School.deleted_at.is_(None),
+        ).order_by(School.name)
+    )
+    schools = result.scalars().all()
+    return [
+        {
+            "id": str(s.id),
+            "name": s.name,
+            "city": s.city,
+            "postcode": s.postcode,
+        }
+        for s in schools
+    ]
+
+
 # ── School preferences ────────────────────────────────────────────────────────
 
 @router.get(
