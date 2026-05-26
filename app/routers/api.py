@@ -41,6 +41,10 @@ api_router.include_router(auth.router)
 api_router.include_router(example.router)
 api_router.include_router(worker_registration.router)
 
+# Worker self-service MUST be registered before workers (admin) so that
+# /workers/me routes are matched before /workers/{worker_id} catches them.
+api_router.include_router(worker_self.router)
+
 # Compliance Vault V1
 api_router.include_router(workers.router)
 api_router.include_router(onboarding.router)
@@ -60,7 +64,6 @@ api_router.include_router(users.router)
 api_router.include_router(schools.router)
 api_router.include_router(role_types.router)
 
-# SCR & Worker Self-Service
-api_router.include_router(worker_self.router)
+# SCR
 api_router.include_router(scr.router)
 api_router.include_router(trust_settings.router)
