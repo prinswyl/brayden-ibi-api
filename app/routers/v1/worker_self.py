@@ -122,6 +122,9 @@ async def get_me(
         rtw_passport_expiry_date=worker.rtw_passport_expiry_date,
         onboarding_status=worker.onboarding_status.value,
         scr_status=scr.scr_status if scr else None,
+        dbs_application_status=scr.dbs_application_status if scr else None,
+        dbs_update_service_linked=scr.dbs_update_service_linked if scr else False,
+        dbs_certificate_number=scr.dbs_certificate_number if scr else None,
         agreement_signed=agreement_signed,
         safeguarding_complete=safeguarding_complete,
     )

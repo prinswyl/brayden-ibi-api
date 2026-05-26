@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.shared.enums import SCRStatus
+from app.shared.enums import DBSApplicationStatus, SCRStatus
 
 
 class WorkerSelfUpdateRequest(BaseModel):
@@ -66,6 +66,9 @@ class WorkerMeResponse(BaseModel):
     rtw_passport_expiry_date: date | None
     onboarding_status: str
     scr_status: SCRStatus | None
+    dbs_application_status: DBSApplicationStatus | None
+    dbs_update_service_linked: bool
+    dbs_certificate_number: str | None
     agreement_signed: bool
     safeguarding_complete: bool
 
