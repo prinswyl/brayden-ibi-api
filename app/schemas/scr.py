@@ -42,7 +42,9 @@ class SCRRecordResponse(BaseModel):
     external_dbs_portal_reference: str | None
 
     barred_list_checked_date: date | None
+    barred_list_not_applicable: bool
     tra_prohibition_checked_date: date | None
+    tra_not_applicable: bool
     qualifications_checked_date: date | None
 
     reference_1_status: ReferenceStatus
@@ -72,7 +74,7 @@ class RecordInitialIDCheckRequest(BaseModel):
 
 class ConfirmPhysicalIDRequest(BaseModel):
     confirmed_date: date
-    location: str = Field(..., min_length=2, max_length=200)
+    location: str | None = Field(None, max_length=200)
 
 
 class UpdateDBSRequest(BaseModel):
@@ -96,7 +98,8 @@ class AdvanceReferenceStatusRequest(BaseModel):
 
 
 class RecordCheckRequest(BaseModel):
-    checked_date: date
+    checked_date: date | None = None
+    not_applicable: bool = False
 
 
 # ── SCR register (full cross-worker view) ────────────────────────────────────

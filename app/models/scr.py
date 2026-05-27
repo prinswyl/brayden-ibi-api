@@ -81,10 +81,12 @@ class SCRRecord(UUIDMixin, TimestampMixin, TenantMixin, Base):
     # Barred list
     barred_list_checked_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     barred_list_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    barred_list_not_applicable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # TRA prohibition
     tra_prohibition_checked_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     tra_prohibition_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    tra_not_applicable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Qualifications
     qualifications_checked_date: Mapped[date | None] = mapped_column(Date, nullable=True)

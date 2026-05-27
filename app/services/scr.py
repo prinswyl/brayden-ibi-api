@@ -112,7 +112,7 @@ class SCRService:
         worker_id: UUID,
         *,
         confirmed_date: date,
-        location: str,
+        location: str | None,
         current_user: CurrentUser,
     ) -> SCRRecord:
         scr = await self.get_by_worker_or_404(worker_id)
@@ -212,18 +212,46 @@ class SCRService:
 
     # ── Other checks ─────────────────────────────────────────────────────────
 
-    async def record_barred_list_check(self, worker_id: UUID, *, checked_date: date, current_user: CurrentUser) -> SCRRecord:
+    async def record_barred_list_check(
+        self,
+        worker_id: UUID,
+        *,
+        checked_date: date | None = None,
+        not_applicable: bool = False,
+        current_user: CurrentUser,
+    ) -> SCRRecord:
         scr = await self.get_by_worker_or_404(worker_id)
-        scr.barred_list_checked_date = checked_date
-        scr.barred_list_verified_by = current_user.user_id
-        await self._audit(scr, "barred_list_checked_date", None, str(checked_date), current_user)
+        if not_applicable:
+            scr.barred_list_not_applicable = True
+            scr.barred_list_checked_date = None
+            scr.barred_list_verified_by = current_user.user_id
+            await self._audit(scr, "barred_list_not_applicable", "false", "true", current_user)
+        elif checked_date:
+            scr.barred_list_not_applicable = False
+            scr.barred_list_checked_date = checked_date
+            scr.barred_list_verified_by = current_user.user_id
+            await self._audit(scr, "barred_list_checked_date", None, str(checked_date), current_user)
         return scr
 
-    async def record_tra_check(self, worker_id: UUID, *, checked_date: date, current_user: CurrentUser) -> SCRRecord:
+    async def record_tra_check(
+        self,
+        worker_id: UUID,
+        *,
+        checked_date: date | None = None,
+        not_applicable: bool = False,
+        current_user: CurrentUser,
+    ) -> SCRRecord:
         scr = await self.get_by_worker_or_404(worker_id)
-        scr.tra_prohibition_checked_date = checked_date
-        scr.tra_prohibition_verified_by = current_user.user_id
-        await self._audit(scr, "tra_prohibition_checked_date", None, str(checked_date), current_user)
+        if not_applicable:
+            scr.tra_not_applicable = True
+            scr.tra_prohibition_checked_date = None
+            scr.tra_prohibition_verified_by = current_user.user_id
+            await self._audit(scr, "tra_not_applicable", "false", "true", current_user)
+        elif checked_date:
+            scr.tra_not_applicable = False
+            scr.tra_prohibition_checked_date = checked_date
+            scr.tra_prohibition_verified_by = current_user.user_id
+            await self._audit(scr, "tra_prohibition_checked_date", None, str(checked_date), current_user)
         return scr
 
     async def record_qualifications_check(self, worker_id: UUID, *, checked_date: date, current_user: CurrentUser) -> SCRRecord:

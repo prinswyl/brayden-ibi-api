@@ -182,7 +182,12 @@ async def record_barred_list(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     svc = SCRService(db)
-    scr = await svc.record_barred_list_check(worker_id, checked_date=body.checked_date, current_user=current_user)
+    scr = await svc.record_barred_list_check(
+        worker_id,
+        checked_date=body.checked_date,
+        not_applicable=body.not_applicable,
+        current_user=current_user,
+    )
     await db.commit()
     return SCRRecordResponse.model_validate(scr)
 
@@ -199,7 +204,12 @@ async def record_tra(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     svc = SCRService(db)
-    scr = await svc.record_tra_check(worker_id, checked_date=body.checked_date, current_user=current_user)
+    scr = await svc.record_tra_check(
+        worker_id,
+        checked_date=body.checked_date,
+        not_applicable=body.not_applicable,
+        current_user=current_user,
+    )
     await db.commit()
     return SCRRecordResponse.model_validate(scr)
 
