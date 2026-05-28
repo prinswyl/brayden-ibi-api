@@ -56,6 +56,9 @@ class WorkerProfile(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Bas
 
     notes: Mapped[str | None] = mapped_column(Text)
 
+    # Staff category — determines which checks are required (e.g. TRA / barred list)
+    staff_category: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Teacher Reference Number (for QTS / teaching staff)
     teacher_reference_number: Mapped[str | None] = mapped_column(Text, nullable=True)
 

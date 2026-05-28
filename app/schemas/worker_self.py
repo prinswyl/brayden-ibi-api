@@ -34,6 +34,10 @@ class WorkerSelfUpdateRequest(BaseModel):
     rtw_passport_issue_date: date | None = None
     rtw_passport_expiry_date: date | None = None
     rtw_document_storage_path: str | None = None
+    # Staff category and bank details
+    staff_category: str | None = Field(None, max_length=20, description="'teaching' or 'support'")
+    bank_sort_code: str | None = Field(None, max_length=8, description="Sort code, e.g. 01-23-45")
+    bank_account_last4: str | None = Field(None, max_length=4, description="Last 4 digits of bank account number")
 
 
 class WorkerMeResponse(BaseModel):
@@ -64,6 +68,9 @@ class WorkerMeResponse(BaseModel):
     rtw_passport_number: str | None
     rtw_passport_issue_date: date | None
     rtw_passport_expiry_date: date | None
+    staff_category: str | None
+    bank_sort_code: str | None
+    bank_account_last4: str | None
     onboarding_status: str
     scr_status: SCRStatus | None
     dbs_application_status: DBSApplicationStatus | None
