@@ -28,6 +28,7 @@ class WorkerProfileUpdate(APIModel):
     emergency_contact_name: str | None = None
     emergency_contact_phone: str | None = None
     notes: str | None = None
+    employment_start_date: date | None = None
 
 
 class WorkerProfileResponse(TenantedModel):

@@ -282,6 +282,25 @@ class SCRService:
             await self._audit(scr, "dbs_risk_assessment_date", None, str(checked_date), current_user)
         return scr
 
+    async def record_overseas_check(
+        self,
+        worker_id: UUID,
+        *,
+        checked_date: date,
+        evidence: str | None = None,
+        details: str | None = None,
+        current_user: CurrentUser,
+    ) -> SCRRecord:
+        scr = await self.get_by_worker_or_404(worker_id)
+        scr.overseas_checks_verified_date = checked_date
+        scr.overseas_checks_verified_by = current_user.user_id
+        if evidence is not None:
+            scr.overseas_check_evidence = evidence
+        if details is not None:
+            scr.overseas_checks_details = details
+        await self._audit(scr, "overseas_checks_verified_date", None, str(checked_date), current_user)
+        return scr
+
     async def record_section_128_check(
         self,
         worker_id: UUID,
@@ -420,37 +439,75 @@ class SCRService:
     # ── Export ────────────────────────────────────────────────────────────────
 
     async def export_csv(self, trust_id: UUID) -> str:
-        result = await self._session.execute(
-            select(SCRRecord).where(SCRRecord.trust_id == trust_id)
+        from app.models.user import User
+        from app.models.worker import WorkerProfile
+
+        q = (
+            select(SCRRecord, WorkerProfile, User)
+            .join(WorkerProfile, WorkerProfile.id == SCRRecord.worker_id)
+            .join(User, User.id == WorkerProfile.user_id)
+            .where(SCRRecord.trust_id == trust_id)
+            .order_by(User.last_name, User.first_name)
         )
-        records = result.scalars().all()
+        rows = (await self._session.execute(q)).all()
+
         buf = io.StringIO()
         writer = csv.writer(buf)
         writer.writerow([
-            "worker_id", "scr_status",
-            "id_verification_method", "initial_id_checked_date",
+            # Worker identity
+            "last_name", "first_name", "title", "employment_start_date", "staff_category",
+            "scr_status",
+            # Identity verification
+            "id_verification_method", "initial_id_checked_date", "initial_id_notes",
+            # Physical ID
             "physical_id_confirmed", "physical_id_confirmed_date", "physical_id_confirmed_location",
+            # Right to Work
             "rtw_checked_date", "rtw_evidence_type",
-            "dbs_application_status", "dbs_certificate_number", "dbs_issue_date", "dbs_checked_date",
+            # DBS risk assessment
+            "dbs_risk_assessment_date", "dbs_risk_assessment_not_applicable",
+            # DBS
+            "dbs_barred_list_included", "dbs_application_status",
+            "dbs_certificate_number", "dbs_issue_date", "dbs_checked_date",
             "dbs_update_service_linked", "dbs_last_update_check_date", "dbs_last_update_result",
-            "barred_list_checked_date", "tra_prohibition_checked_date", "qualifications_checked_date",
+            "external_dbs_portal_reference",
+            # Other checks
+            "barred_list_checked_date", "barred_list_not_applicable",
+            "tra_prohibition_checked_date", "tra_not_applicable",
+            "qualifications_checked_date",
+            # Section 128
+            "section_128_checked_date", "section_128_not_applicable",
+            # References
             "reference_1_status", "reference_1_verified_date",
             "reference_2_status", "reference_2_verified_date",
-            "overseas_checks_required",
+            # Overseas checks
+            "overseas_checks_required", "overseas_checks_details",
+            "overseas_check_evidence", "overseas_checks_verified_date",
         ])
-        for r in records:
+        for scr, wp, u in rows:
             writer.writerow([
-                r.worker_id, r.scr_status.value,
-                r.id_verification_method.value, r.initial_id_checked_date,
-                r.physical_id_confirmed, r.physical_id_confirmed_date, r.physical_id_confirmed_location,
-                r.rtw_checked_date, r.rtw_evidence_type,
-                r.dbs_application_status.value, r.dbs_certificate_number, r.dbs_issue_date, r.dbs_checked_date,
-                r.dbs_update_service_linked, r.dbs_last_update_check_date,
-                r.dbs_last_update_result.value if r.dbs_last_update_result else "",
-                r.barred_list_checked_date, r.tra_prohibition_checked_date, r.qualifications_checked_date,
-                r.reference_1_status.value, r.reference_1_verified_date,
-                r.reference_2_status.value, r.reference_2_verified_date,
-                r.overseas_checks_required,
+                u.last_name, u.first_name,
+                getattr(u, "title", "") or "",
+                wp.employment_start_date or "",
+                wp.staff_category or "",
+                scr.scr_status.value,
+                scr.id_verification_method.value, scr.initial_id_checked_date, scr.initial_id_notes or "",
+                scr.physical_id_confirmed, scr.physical_id_confirmed_date, scr.physical_id_confirmed_location or "",
+                scr.rtw_checked_date, scr.rtw_evidence_type or "",
+                scr.dbs_risk_assessment_date or "", scr.dbs_risk_assessment_not_applicable,
+                scr.dbs_barred_list_included,
+                scr.dbs_application_status.value, scr.dbs_certificate_number or "",
+                scr.dbs_issue_date or "", scr.dbs_checked_date or "",
+                scr.dbs_update_service_linked, scr.dbs_last_update_check_date or "",
+                scr.dbs_last_update_result.value if scr.dbs_last_update_result else "",
+                scr.external_dbs_portal_reference or "",
+                scr.barred_list_checked_date or "", scr.barred_list_not_applicable,
+                scr.tra_prohibition_checked_date or "", scr.tra_not_applicable,
+                scr.qualifications_checked_date or "",
+                scr.section_128_checked_date or "", scr.section_128_not_applicable,
+                scr.reference_1_status.value, scr.reference_1_verified_date or "",
+                scr.reference_2_status.value, scr.reference_2_verified_date or "",
+                scr.overseas_checks_required, scr.overseas_checks_details or "",
+                scr.overseas_check_evidence or "", scr.overseas_checks_verified_date or "",
             ])
         return buf.getvalue()
 

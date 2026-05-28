@@ -124,6 +124,12 @@ class RecordCheckRequest(BaseModel):
     not_applicable: bool = False
 
 
+class RecordOverseasCheckRequest(BaseModel):
+    checked_date: date
+    evidence: str | None = Field(None, max_length=500)
+    details: str | None = Field(None, max_length=500)
+
+
 # ── SCR register (full cross-worker view) ────────────────────────────────────
 
 class WorkerSCRRegisterRow(BaseModel):

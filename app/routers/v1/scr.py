@@ -29,6 +29,7 @@ from app.schemas.scr import (
     RecordCheckRequest,
     RecordDBSRiskAssessmentRequest,
     RecordInitialIDCheckRequest,
+    RecordOverseasCheckRequest,
     RecordRTWCheckRequest,
     RecordSection128Request,
     SCRRecordResponse,
@@ -290,6 +291,29 @@ async def record_section_128(
         worker_id,
         checked_date=body.checked_date,
         not_applicable=body.not_applicable,
+        current_user=current_user,
+    )
+    await db.commit()
+    return await _resolve_scr_response(scr, db)
+
+
+@router.post(
+    "/workers/{worker_id}/scr/overseas",
+    response_model=SCRRecordResponse,
+    dependencies=[Depends(require_permission("workers:update"))],
+)
+async def record_overseas_check(
+    worker_id: UUID,
+    body: RecordOverseasCheckRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    svc = SCRService(db)
+    scr = await svc.record_overseas_check(
+        worker_id,
+        checked_date=body.checked_date,
+        evidence=body.evidence,
+        details=body.details,
         current_user=current_user,
     )
     await db.commit()
