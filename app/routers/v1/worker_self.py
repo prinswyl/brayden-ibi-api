@@ -123,6 +123,8 @@ async def get_me(
         staff_category=worker.staff_category,
         bank_sort_code=worker.bank_sort_code,
         bank_account_last4=worker.bank_account_last4,
+        bank_name=worker.bank_name,
+        bank_account_name=worker.bank_account_name,
         onboarding_status=worker.onboarding_status.value,
         scr_status=scr.scr_status if scr else None,
         dbs_application_status=scr.dbs_application_status if scr else None,

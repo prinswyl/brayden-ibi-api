@@ -26,6 +26,8 @@ class WorkerProfile(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Bas
     emergency_contact_phone: Mapped[str | None] = mapped_column(Text)
     bank_account_last4: Mapped[str | None] = mapped_column(Text)
     bank_sort_code: Mapped[str | None] = mapped_column(Text)
+    bank_name: Mapped[str | None] = mapped_column(Text)
+    bank_account_name: Mapped[str | None] = mapped_column(Text)
 
     # Onboarding lifecycle (human-facing)
     onboarding_status: Mapped[OnboardingStatus] = mapped_column(

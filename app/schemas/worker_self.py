@@ -38,6 +38,8 @@ class WorkerSelfUpdateRequest(BaseModel):
     staff_category: str | None = Field(None, max_length=20, description="'teaching' or 'support'")
     bank_sort_code: str | None = Field(None, max_length=8, description="Sort code, e.g. 01-23-45")
     bank_account_last4: str | None = Field(None, max_length=4, description="Last 4 digits of bank account number")
+    bank_name: str | None = Field(None, max_length=100, description="Bank name, e.g. Barclays")
+    bank_account_name: str | None = Field(None, max_length=150, description="Full name as it appears on the account")
 
 
 class WorkerMeResponse(BaseModel):
@@ -71,6 +73,8 @@ class WorkerMeResponse(BaseModel):
     staff_category: str | None
     bank_sort_code: str | None
     bank_account_last4: str | None
+    bank_name: str | None
+    bank_account_name: str | None
     onboarding_status: str
     scr_status: SCRStatus | None
     dbs_application_status: DBSApplicationStatus | None
