@@ -33,6 +33,7 @@ class SCRRecordResponse(BaseModel):
     rtw_evidence_type: str | None
 
     dbs_risk_assessment_date: date | None
+    dbs_risk_assessment_not_applicable: bool
     dbs_barred_list_included: bool
     dbs_application_status: DBSApplicationStatus
     dbs_certificate_number: str | None

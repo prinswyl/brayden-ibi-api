@@ -63,6 +63,7 @@ class SCRRecord(UUIDMixin, TimestampMixin, TenantMixin, Base):
 
     # DBS risk assessment
     dbs_risk_assessment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    dbs_risk_assessment_not_applicable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     dbs_barred_list_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # DBS

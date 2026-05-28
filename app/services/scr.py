@@ -274,8 +274,9 @@ class SCRService:
     ) -> SCRRecord:
         scr = await self.get_by_worker_or_404(worker_id)
         if not_applicable:
+            scr.dbs_risk_assessment_not_applicable = True
             scr.dbs_risk_assessment_date = None
-            await self._audit(scr, "dbs_risk_assessment", None, "not_applicable", current_user)
+            await self._audit(scr, "dbs_risk_assessment_not_applicable", "false", "true", current_user)
         elif checked_date:
             scr.dbs_risk_assessment_date = checked_date
             await self._audit(scr, "dbs_risk_assessment_date", None, str(checked_date), current_user)
