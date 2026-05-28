@@ -27,8 +27,10 @@ from app.schemas.scr import (
     AdvanceReferenceStatusRequest,
     ConfirmPhysicalIDRequest,
     RecordCheckRequest,
+    RecordDBSRiskAssessmentRequest,
     RecordInitialIDCheckRequest,
     RecordRTWCheckRequest,
+    RecordSection128Request,
     SCRRecordResponse,
     SCRRegisterResponse,
     SetIDVerificationMethodRequest,
@@ -37,6 +39,25 @@ from app.schemas.scr import (
 from app.services.scr import SCRService
 
 router = APIRouter(tags=["SCR"])
+
+
+async def _resolve_scr_response(scr, db: AsyncSession) -> SCRRecordResponse:
+    """Build SCRRecordResponse, resolving user-ID FK to display names where needed."""
+    from sqlalchemy import select as _sel
+    from app.models.user import User
+
+    s128_name: str | None = None
+    if scr.section_128_checked_by:
+        result = await db.execute(_sel(User).where(User.id == scr.section_128_checked_by))
+        u = result.scalar_one_or_none()
+        if u:
+            s128_name = f"{u.first_name} {u.last_name}".strip()
+
+    data = {
+        **{c.key: getattr(scr, c.key) for c in scr.__table__.columns},
+        "section_128_checked_by_name": s128_name,
+    }
+    return SCRRecordResponse.model_validate(data)
 
 
 @router.get(
@@ -52,7 +73,7 @@ async def get_scr(
     svc = SCRService(db)
     scr = await svc.get_or_create(worker_id, current_user.trust_id)
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.patch(
@@ -88,7 +109,7 @@ async def record_initial_id_check(
         worker_id, checked_date=body.checked_date, notes=body.notes, current_user=current_user
     )
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -229,6 +250,50 @@ async def record_qualifications(
     scr = await svc.record_qualifications_check(worker_id, checked_date=body.checked_date, current_user=current_user)
     await db.commit()
     return SCRRecordResponse.model_validate(scr)
+
+
+@router.post(
+    "/workers/{worker_id}/scr/dbs-risk-assessment",
+    response_model=SCRRecordResponse,
+    dependencies=[Depends(require_permission("workers:update"))],
+)
+async def record_dbs_risk_assessment(
+    worker_id: UUID,
+    body: RecordDBSRiskAssessmentRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    svc = SCRService(db)
+    scr = await svc.record_dbs_risk_assessment(
+        worker_id,
+        checked_date=body.checked_date,
+        not_applicable=body.not_applicable,
+        current_user=current_user,
+    )
+    await db.commit()
+    return await _resolve_scr_response(scr, db)
+
+
+@router.post(
+    "/workers/{worker_id}/scr/section-128",
+    response_model=SCRRecordResponse,
+    dependencies=[Depends(require_permission("workers:update"))],
+)
+async def record_section_128(
+    worker_id: UUID,
+    body: RecordSection128Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    svc = SCRService(db)
+    scr = await svc.record_section_128_check(
+        worker_id,
+        checked_date=body.checked_date,
+        not_applicable=body.not_applicable,
+        current_user=current_user,
+    )
+    await db.commit()
+    return await _resolve_scr_response(scr, db)
 
 
 @router.get(

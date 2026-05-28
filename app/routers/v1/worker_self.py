@@ -96,6 +96,7 @@ async def get_me(
     return WorkerMeResponse(
         user_id=user.id,
         worker_id=worker.id,
+        title=user.title,
         first_name=user.first_name,
         last_name=user.last_name,
         email=user.email,
@@ -120,6 +121,9 @@ async def get_me(
         rtw_passport_number=worker.rtw_passport_number,
         rtw_passport_issue_date=worker.rtw_passport_issue_date,
         rtw_passport_expiry_date=worker.rtw_passport_expiry_date,
+        qualification_type=worker.qualification_type,
+        qualification_date=worker.qualification_date,
+        employment_start_date=worker.employment_start_date,
         staff_category=worker.staff_category,
         bank_sort_code=worker.bank_sort_code,
         bank_account_last4=worker.bank_account_last4,

@@ -61,8 +61,13 @@ class WorkerProfile(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Bas
     # Staff category — determines which checks are required (e.g. TRA / barred list)
     staff_category: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Teacher Reference Number (for QTS / teaching staff)
+    # QTS / teaching qualifications (worker-declared)
     teacher_reference_number: Mapped[str | None] = mapped_column(Text, nullable=True)
+    qualification_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    qualification_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    # Employment — set by HR/admin on approval
+    employment_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Overseas checks declaration
     overseas_checks_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

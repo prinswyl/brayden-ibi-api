@@ -61,6 +61,10 @@ class SCRRecord(UUIDMixin, TimestampMixin, TenantMixin, Base):
     rtw_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     rtw_evidence_type: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # DBS risk assessment
+    dbs_risk_assessment_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    dbs_barred_list_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # DBS
     dbs_application_status: Mapped[DBSApplicationStatus] = mapped_column(
         PGEnum(DBSApplicationStatus, name="dbs_application_status", create_type=False),
@@ -106,9 +110,15 @@ class SCRRecord(UUIDMixin, TimestampMixin, TenantMixin, Base):
     reference_2_verified_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     reference_2_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 
+    # Section 128 (management prohibition check — leadership roles only)
+    section_128_checked_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    section_128_checked_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    section_128_not_applicable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # Overseas checks
     overseas_checks_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     overseas_checks_details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    overseas_check_evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
     overseas_checks_verified_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     overseas_checks_verified_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 

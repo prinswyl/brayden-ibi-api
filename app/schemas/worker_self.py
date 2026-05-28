@@ -10,6 +10,7 @@ from app.shared.enums import DBSApplicationStatus, SCRStatus
 
 class WorkerSelfUpdateRequest(BaseModel):
     """Fields a worker is permitted to update on their own profile."""
+    title: str | None = Field(None, max_length=20, description="Mr / Mrs / Ms / Miss / Dr / Prof")
     first_name: str | None = Field(None, max_length=100)
     last_name: str | None = Field(None, max_length=100)
     preferred_name: str | None = Field(None, max_length=100)
@@ -34,6 +35,9 @@ class WorkerSelfUpdateRequest(BaseModel):
     rtw_passport_issue_date: date | None = None
     rtw_passport_expiry_date: date | None = None
     rtw_document_storage_path: str | None = None
+    # Teaching qualifications (worker-declared)
+    qualification_type: str | None = Field(None, max_length=100, description="e.g. PGCE, QTS, BA Education")
+    qualification_date: date | None = None
     # Staff category and bank details
     staff_category: str | None = Field(None, max_length=20, description="'teaching' or 'support'")
     bank_sort_code: str | None = Field(None, max_length=8, description="Sort code, e.g. 01-23-45")
@@ -46,6 +50,7 @@ class WorkerMeResponse(BaseModel):
     """Worker's own profile view — includes SCR status summary."""
     user_id: UUID
     worker_id: UUID
+    title: str | None
     first_name: str
     last_name: str
     email: str
@@ -70,6 +75,9 @@ class WorkerMeResponse(BaseModel):
     rtw_passport_number: str | None
     rtw_passport_issue_date: date | None
     rtw_passport_expiry_date: date | None
+    qualification_type: str | None
+    qualification_date: date | None
+    employment_start_date: date | None
     staff_category: str | None
     bank_sort_code: str | None
     bank_account_last4: str | None

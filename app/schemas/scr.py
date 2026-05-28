@@ -23,7 +23,7 @@ class SCRRecordResponse(BaseModel):
 
     id_verification_method: IDVerificationMethod
     initial_id_checked_date: date | None
-    initial_id_notes: str | None
+    initial_id_notes: str | None        # evidence produced (list of IDs shown)
 
     physical_id_confirmed: bool
     physical_id_confirmed_date: date | None
@@ -32,6 +32,8 @@ class SCRRecordResponse(BaseModel):
     rtw_checked_date: date | None
     rtw_evidence_type: str | None
 
+    dbs_risk_assessment_date: date | None
+    dbs_barred_list_included: bool
     dbs_application_status: DBSApplicationStatus
     dbs_certificate_number: str | None
     dbs_issue_date: date | None
@@ -47,6 +49,10 @@ class SCRRecordResponse(BaseModel):
     tra_not_applicable: bool
     qualifications_checked_date: date | None
 
+    section_128_checked_date: date | None
+    section_128_not_applicable: bool
+    section_128_checked_by_name: str | None  # resolved server-side
+
     reference_1_status: ReferenceStatus
     reference_1_verified_date: date | None
     reference_2_status: ReferenceStatus
@@ -54,6 +60,8 @@ class SCRRecordResponse(BaseModel):
 
     overseas_checks_required: bool
     overseas_checks_details: str | None
+    overseas_check_evidence: str | None
+    overseas_checks_verified_date: date | None
 
     created_at: datetime
     updated_at: datetime
@@ -86,6 +94,19 @@ class UpdateDBSRequest(BaseModel):
     last_update_check_date: date | None = None
     last_update_result: DBSUpdateResult | None = None
     external_portal_reference: str | None = None
+    barred_list_included: bool | None = None
+
+
+class RecordDBSRiskAssessmentRequest(BaseModel):
+    """N/A is represented by not_applicable=True; otherwise provide a date."""
+    checked_date: date | None = None
+    not_applicable: bool = False
+
+
+class RecordSection128Request(BaseModel):
+    """N/A is represented by not_applicable=True; otherwise provide a date."""
+    checked_date: date | None = None
+    not_applicable: bool = False
 
 
 class RecordRTWCheckRequest(BaseModel):

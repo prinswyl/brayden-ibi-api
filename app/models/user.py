@@ -12,6 +12,7 @@ from app.shared.enums import UserStatus
 class User(UUIDMixin, TimestampMixin, SoftDeleteMixin, TenantMixin, Base):
     __tablename__ = "users"
 
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
     email: Mapped[str] = mapped_column(Text, nullable=False)
     first_name: Mapped[str] = mapped_column(Text, nullable=False)
     last_name: Mapped[str] = mapped_column(Text, nullable=False)

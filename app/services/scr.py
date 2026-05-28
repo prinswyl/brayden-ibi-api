@@ -140,6 +140,7 @@ class SCRService:
         last_update_check_date: date | None = None,
         last_update_result: str | None = None,
         external_portal_reference: str | None = None,
+        barred_list_included: bool | None = None,
         current_user: CurrentUser,
     ) -> SCRRecord:
         scr = await self.get_by_worker_or_404(worker_id)
@@ -160,6 +161,8 @@ class SCRService:
             scr.dbs_last_update_result = last_update_result
         if external_portal_reference is not None:
             scr.external_dbs_portal_reference = external_portal_reference
+        if barred_list_included is not None:
+            scr.dbs_barred_list_included = barred_list_included
         await self._audit(scr, "dbs_fields_updated", None, "updated", current_user)
         await self._recompute_status(scr)
         return scr
@@ -259,6 +262,44 @@ class SCRService:
         scr.qualifications_checked_date = checked_date
         scr.qualifications_verified_by = current_user.user_id
         await self._audit(scr, "qualifications_checked_date", None, str(checked_date), current_user)
+        return scr
+
+    async def record_dbs_risk_assessment(
+        self,
+        worker_id: UUID,
+        *,
+        checked_date: date | None = None,
+        not_applicable: bool = False,
+        current_user: CurrentUser,
+    ) -> SCRRecord:
+        scr = await self.get_by_worker_or_404(worker_id)
+        if not_applicable:
+            scr.dbs_risk_assessment_date = None
+            await self._audit(scr, "dbs_risk_assessment", None, "not_applicable", current_user)
+        elif checked_date:
+            scr.dbs_risk_assessment_date = checked_date
+            await self._audit(scr, "dbs_risk_assessment_date", None, str(checked_date), current_user)
+        return scr
+
+    async def record_section_128_check(
+        self,
+        worker_id: UUID,
+        *,
+        checked_date: date | None = None,
+        not_applicable: bool = False,
+        current_user: CurrentUser,
+    ) -> SCRRecord:
+        scr = await self.get_by_worker_or_404(worker_id)
+        if not_applicable:
+            scr.section_128_not_applicable = True
+            scr.section_128_checked_date = None
+            scr.section_128_checked_by = current_user.user_id
+            await self._audit(scr, "section_128_not_applicable", "false", "true", current_user)
+        elif checked_date:
+            scr.section_128_not_applicable = False
+            scr.section_128_checked_date = checked_date
+            scr.section_128_checked_by = current_user.user_id
+            await self._audit(scr, "section_128_checked_date", None, str(checked_date), current_user)
         return scr
 
     # ── Status computation ────────────────────────────────────────────────────
