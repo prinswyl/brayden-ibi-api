@@ -41,7 +41,8 @@ logger = structlog.get_logger(__name__)
 _TRANSITIONS: dict[OnboardingStatus, set[OnboardingStatus]] = {
     OnboardingStatus.draft: {OnboardingStatus.submitted},
     OnboardingStatus.submitted: {
-        OnboardingStatus.under_review,
+        OnboardingStatus.approved,        # HR approves directly (most common path)
+        OnboardingStatus.under_review,    # HR places into formal review first
         OnboardingStatus.rejected,
         OnboardingStatus.draft,           # HR sends back for completion
     },
