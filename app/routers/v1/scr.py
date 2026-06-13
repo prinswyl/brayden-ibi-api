@@ -91,7 +91,7 @@ async def set_id_verification_method(
     svc = SCRService(db)
     scr = await svc.set_id_verification_method(worker_id, body.method, current_user=current_user)
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -133,7 +133,7 @@ async def confirm_physical_id(
         current_user=current_user,
     )
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -150,7 +150,7 @@ async def update_dbs(
     svc = SCRService(db)
     scr = await svc.update_dbs(worker_id, **body.model_dump(exclude_none=True), current_user=current_user)
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -169,7 +169,7 @@ async def record_rtw(
         worker_id, checked_date=body.checked_date, evidence_type=body.evidence_type, current_user=current_user
     )
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -189,7 +189,7 @@ async def advance_reference(
         worker_id, reference_number, body.status, current_user=current_user
     )
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -211,7 +211,7 @@ async def record_barred_list(
         current_user=current_user,
     )
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -233,7 +233,7 @@ async def record_tra(
         current_user=current_user,
     )
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
@@ -250,7 +250,7 @@ async def record_qualifications(
     svc = SCRService(db)
     scr = await svc.record_qualifications_check(worker_id, checked_date=body.checked_date, current_user=current_user)
     await db.commit()
-    return SCRRecordResponse.model_validate(scr)
+    return await _resolve_scr_response(scr, db)
 
 
 @router.post(
