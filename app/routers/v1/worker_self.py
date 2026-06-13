@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.dependencies import get_db
+from app.core.permissions import require_permission
 from app.models.scr import WorkerAgreement, WorkerReference
 from app.models.worker import WorkerProfile
 from app.repositories.worker import WorkerRepository
@@ -577,3 +578,68 @@ async def set_school_preferences(
         )
         for item in sorted(body.preferences, key=lambda x: x.rank)
     ]
+
+
+# ── Worker bookings ───────────────────────────────────────────────────────────
+
+@router.get(
+    "/bookings",
+    summary="List all bookings relevant to the current worker",
+    dependencies=[Depends(require_permission("bookings:read"))],
+)
+async def get_my_bookings(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns bookings where the worker is assigned, plus any pending offers."""
+    from sqlalchemy import select as _sel, or_
+    from app.models.booking import Booking, BookingOffer
+
+    worker = await _get_worker_profile(current_user, db)
+
+    # Bookings where worker is directly assigned (accepted / confirmed / completed / etc.)
+    assigned_q = _sel(Booking).where(
+        Booking.worker_id == worker.id,
+        Booking.deleted_at.is_(None),
+    )
+
+    # Bookings where worker has an active offer
+    offered_q = (
+        _sel(Booking)
+        .join(BookingOffer, Booking.id == BookingOffer.booking_id)
+        .where(
+            BookingOffer.worker_id == worker.id,
+            BookingOffer.status == "offered",
+            Booking.deleted_at.is_(None),
+        )
+    )
+
+    assigned_rows = (await db.execute(assigned_q)).scalars().all()
+    offered_rows = (await db.execute(offered_q)).scalars().all()
+
+    # Merge, deduplicate
+    merged = {b.id: b for b in [*offered_rows, *assigned_rows]}
+    bookings = sorted(merged.values(), key=lambda b: (b.shift_date, b.start_time), reverse=True)
+
+    from app.schemas.booking import BookingResponse
+    return [BookingResponse.model_validate(b) for b in bookings]
+
+
+# ── Worker documents ──────────────────────────────────────────────────────────
+
+@router.get(
+    "/documents",
+    summary="List the current worker's own compliance documents",
+    dependencies=[Depends(require_permission("compliance_documents:read"))],
+)
+async def get_my_documents(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.compliance_document import ComplianceDocumentService
+    from app.schemas.compliance_document import DocumentResponse
+
+    worker = await _get_worker_profile(current_user, db)
+    svc = ComplianceDocumentService(db)
+    items, total = await svc.list_worker_documents(worker.id, include_superseded=False)
+    return [DocumentResponse.model_validate(d) for d in items]
