@@ -270,6 +270,81 @@ class BookingService:
         ))
         return booking
 
+    async def claim_shift(
+        self,
+        booking_id: UUID,
+        *,
+        worker_id: UUID,
+        trust_id: UUID,
+        current_user: CurrentUser,
+    ) -> Booking:
+        """Worker proactively claims an open shift from the adverts board.
+
+        Works for both `requested` and `offered` bookings — the worker's offer is
+        created and accepted atomically, bypassing the normal dispatch step.
+        """
+        from datetime import date as _date
+        booking = await self._bookings.get_by_id_or_404(booking_id)
+
+        if booking.trust_id != trust_id:
+            from app.shared.exceptions import PermissionDeniedError
+            raise PermissionDeniedError("Booking does not belong to your trust.")
+
+        if booking.status not in (BookingStatus.requested, BookingStatus.offered):
+            raise WorkflowError(
+                f"This shift is no longer available (status: {booking.status.value})."
+            )
+        if booking.shift_date < _date.today():
+            raise WorkflowError("This shift date has already passed.")
+
+        # Check worker hasn't already responded to this booking
+        existing = await self._offers.get_for_booking_and_worker(booking_id, worker_id)
+        if existing and existing.status == BookingOfferStatus.declined:
+            raise WorkflowError("You have already declined this shift.")
+        if existing and existing.status == BookingOfferStatus.accepted:
+            raise WorkflowError("You have already accepted this shift.")
+
+        now = datetime.now(UTC)
+
+        # Create offer record if not already dispatched to this worker
+        if not existing:
+            existing = await self._offers.create(
+                trust_id=booking.trust_id,
+                booking_id=booking.id,
+                worker_id=worker_id,
+                status=BookingOfferStatus.offered,
+                offered_at=now,
+                expires_at=booking.offer_expires_at,
+            )
+
+        # Expire all other outstanding offers (first-claim-wins)
+        await self._offers.expire_all_for_booking(booking_id)
+        await self._offers.update(existing, status=BookingOfferStatus.accepted, responded_at=now)
+
+        old_status = booking.status
+        booking = await self._bookings.update(
+            booking,
+            status=BookingStatus.accepted,
+            accepted_at=now,
+            worker_id=worker_id,
+            offered_at=booking.offered_at or now,
+        )
+        await self._bookings.write_status_history(
+            booking.id, booking.trust_id, old_status, BookingStatus.accepted, current_user.user_id
+        )
+        await audit_log(
+            self._session, action=core.audit.AuditAction.update,
+            resource_type="bookings", resource_id=booking.id,
+            trust_id=booking.trust_id, user_id=current_user.user_id,
+            new_values={"status": BookingStatus.accepted.value, "worker_id": str(worker_id), "claimed": "true"},
+        )
+        await booking_events.dispatch(booking_events.BookingAcceptedEvent(
+            booking_id=booking.id, trust_id=booking.trust_id,
+            worker_id=worker_id, shift_date=str(booking.shift_date),
+            occurred_at=now,
+        ))
+        return booking
+
     async def decline_offer(
         self,
         booking_id: UUID,

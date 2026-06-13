@@ -126,6 +126,29 @@ async def decline_offer(
     )
 
 
+@router.post("/{booking_id}/claim", response_model=BookingResponse)
+async def claim_shift(
+    booking_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_permission("bookings:read")),
+):
+    """Worker proactively claims an open shift from the adverts board."""
+    from app.repositories.worker import WorkerRepository
+    from app.shared.exceptions import NotFoundError
+    worker = await WorkerRepository(db).get_by_user_id(current_user.user_id)
+    if not worker:
+        raise NotFoundError("WorkerProfile", str(current_user.user_id))
+    svc = BookingService(db)
+    booking = await svc.claim_shift(
+        booking_id,
+        worker_id=worker.id,
+        trust_id=current_user.trust_id,
+        current_user=current_user,
+    )
+    await db.commit()
+    return booking
+
+
 @router.post("/{booking_id}/confirm", response_model=BookingResponse)
 async def confirm_booking(
     booking_id: UUID,

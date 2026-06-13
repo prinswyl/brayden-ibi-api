@@ -580,6 +580,55 @@ async def set_school_preferences(
     ]
 
 
+# ── Available shifts board ───────────────────────────────────────────────────
+
+@router.get(
+    "/available-shifts",
+    summary="Open shifts across the trust that the worker can claim",
+    dependencies=[Depends(require_permission("bookings:read"))],
+)
+async def get_available_shifts(
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns all open (requested / offered) future shifts in the trust
+    that this worker has not already declined or accepted."""
+    from datetime import date as _date
+    from sqlalchemy import select as _sel, and_
+    from app.models.booking import Booking, BookingOffer
+    from app.shared.enums import BookingStatus, BookingOfferStatus
+    from app.schemas.booking import BookingResponse
+
+    worker = await _get_worker_profile(current_user, db)
+
+    # Booking IDs this worker has already declined or accepted
+    already_responded = (
+        _sel(BookingOffer.booking_id)
+        .where(
+            BookingOffer.worker_id == worker.id,
+            BookingOffer.status.in_([
+                BookingOfferStatus.declined,
+                BookingOfferStatus.accepted,
+            ]),
+        )
+    )
+
+    q = (
+        _sel(Booking)
+        .where(
+            Booking.trust_id == current_user.trust_id,
+            Booking.status.in_([BookingStatus.requested, BookingStatus.offered]),
+            Booking.shift_date >= _date.today(),
+            Booking.deleted_at.is_(None),
+            ~Booking.id.in_(already_responded),
+        )
+        .order_by(Booking.shift_date.asc(), Booking.start_time.asc())
+    )
+
+    bookings = (await db.execute(q)).scalars().all()
+    return [BookingResponse.model_validate(b) for b in bookings]
+
+
 # ── Worker bookings ───────────────────────────────────────────────────────────
 
 @router.get(
