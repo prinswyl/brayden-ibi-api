@@ -72,7 +72,7 @@ async def create_worker(
 )
 async def list_workers(
     offset: int = Query(0, ge=0),
-    limit: int = Query(25, ge=1, le=100),
+    limit: int = Query(25, ge=1, le=500),
     onboarding_status: str | None = Query(None),
     compliance_stage: str | None = Query(None),
     first_shift_cleared: bool | None = Query(None),
